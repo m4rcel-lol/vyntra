@@ -1,0 +1,381 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+enum AnalyticsEventType {
+  PROFILE_VIEW
+  LINK_CLICK
+  SOCIAL_CLICK
+  TEMPLATE_IMPORT
+  FILE_VIEW
+  FILE_DOWNLOAD
+}
+
+enum FileAssetKind {
+  AVATAR
+  BANNER
+  BACKGROUND_IMAGE
+  BACKGROUND_VIDEO
+  AUDIO
+  CURSOR
+  BADGE_ICON
+  TEMPLATE_PREVIEW
+  CUSTOM_ICON
+  METADATA_IMAGE
+  OTHER
+}
+
+enum ReportTargetType {
+  PROFILE
+  TEMPLATE
+  FILE
+  USER
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
+
+model User {
+  id           String    @id @default(cuid())
+  username     String    @unique
+  email        String?   @unique
+  passwordHash String
+  role         UserRole  @default(USER)
+  isBanned     Boolean   @default(false)
+  banReason    String?
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  profile             Profile?
+  sessions            Session[]
+  files               FileAsset[]
+  ownedBadges         Badge[]         @relation("OwnedBadges")
+  assignedBadges      UserBadge[]     @relation("AssignedBadges")
+  templates           Template[]
+  templateLikes       TemplateLike[]
+  reports             Report[]        @relation("ReporterReports")
+  reviewedReports     Report[]        @relation("ReviewerReports")
+  auditLogs           AdminAuditLog[] @relation("ActorAuditLogs")
+  reservedUsernames   ReservedUsername[]
+  announcements       Announcement[]
+}
+
+model Session {
+  id          String    @id @default(cuid())
+  userId      String
+  tokenHash   String    @unique
+  csrfToken   String
+  userAgent   String?
+  ipHash      String?
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  lastSeenAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Profile {
+  id                String   @id @default(cuid())
+  uid               Int      @unique @default(autoincrement())
+  userId            String   @unique
+  displayName       String
+  bio               String   @default("")
+  location          String   @default("")
+  layout            String   @default("centered-glass")
+  statusText        String   @default("Creating something memorable")
+  discordPresence   Json     @default("{}")
+  musicActivity     Json     @default("{}")
+  theme             Json     @default("{}")
+  effects           Json     @default("{}")
+  metadata          Json     @default("{}")
+  embeds            Json     @default("[]")
+  customCss         String   @default("")
+  sanitizedCss      String   @default("")
+  clickToEnter      Boolean  @default(false)
+  viewCount         Int      @default(0)
+  aliasSlug         String?  @unique
+  isPublic          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  avatarFileId      String?
+  bannerFileId      String?
+  backgroundFileId  String?
+  audioFileId       String?
+  cursorFileId      String?
+  metadataFileId    String?
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  links      Link[]
+  badges     UserBadge[]
+  files      FileAsset[]
+  views      ProfileView[]
+  clicks     LinkClick[]
+  events     AnalyticsEvent[]
+
+  @@index([isPublic])
+  @@index([createdAt])
+}
+
+model Link {
+  id          String   @id @default(cuid())
+  profileId   String
+  title       String
+  url         String
+  kind        String   @default("website")
+  order       Int      @default(0)
+  isVisible   Boolean  @default(true)
+  clickCount  Int      @default(0)
+  style       Json     @default("{}")
+  iconFileId  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  profile Profile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  icon    FileAsset? @relation("LinkIcon", fields: [iconFileId], references: [id], onDelete: SetNull)
+  clicks  LinkClick[]
+
+  @@index([profileId, order])
+}
+
+model Badge {
+  id          String   @id @default(cuid())
+  ownerUserId String?
+  slug        String   @unique
+  name        String
+  description String   @default("")
+  color       String   @default("#8b5cf6")
+  glowColor   String   @default("#8b5cf6")
+  tooltip     String   @default("")
+  isGlobal    Boolean  @default(false)
+  iconFileId  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner       User?       @relation("OwnedBadges", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  icon        FileAsset?  @relation("BadgeIcon", fields: [iconFileId], references: [id], onDelete: SetNull)
+  userBadges  UserBadge[]
+
+  @@index([isGlobal])
+  @@index([ownerUserId])
+}
+
+model UserBadge {
+  id           String   @id @default(cuid())
+  profileId    String
+  badgeId      String
+  assignedById String?
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  profile    Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  badge      Badge   @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  assignedBy User?   @relation("AssignedBadges", fields: [assignedById], references: [id], onDelete: SetNull)
+
+  @@unique([profileId, badgeId])
+  @@index([profileId, order])
+}
+
+model Template {
+  id            String   @id @default(cuid())
+  ownerUserId   String
+  name          String
+  description   String   @default("")
+  style         String   @default("dark")
+  tags          String[] @default([])
+  isPublished   Boolean  @default(false)
+  snapshot      Json
+  importCount   Int      @default(0)
+  likeCount     Int      @default(0)
+  reportCount   Int      @default(0)
+  previewFileId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  owner       User           @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  previewFile FileAsset?     @relation("TemplatePreview", fields: [previewFileId], references: [id], onDelete: SetNull)
+  likes       TemplateLike[]
+
+  @@index([isPublished, style])
+  @@index([ownerUserId])
+}
+
+model TemplateLike {
+  id         String   @id @default(cuid())
+  templateId String
+  userId     String
+  createdAt  DateTime @default(now())
+
+  template Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, userId])
+  @@index([userId])
+}
+
+model FileAsset {
+  id           String        @id @default(cuid())
+  publicId     String        @unique @default(uuid())
+  ownerUserId  String
+  profileId    String?
+  kind         FileAssetKind @default(OTHER)
+  storageDriver String       @default("local")
+  objectKey    String        @unique
+  originalName String
+  safeName     String
+  mimeType     String
+  sizeBytes    Int
+  checksum     String?
+  isPublic     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  deletedAt    DateTime?
+
+  owner            User       @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  profile          Profile?   @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  linkIcons        Link[]     @relation("LinkIcon")
+  badgeIcons       Badge[]    @relation("BadgeIcon")
+  templatePreviews Template[] @relation("TemplatePreview")
+
+  @@index([ownerUserId, kind])
+  @@index([profileId])
+  @@index([deletedAt])
+}
+
+model AnalyticsEvent {
+  id          String             @id @default(cuid())
+  profileId   String?
+  userId      String?
+  type        AnalyticsEventType
+  path        String             @default("")
+  referrer    String             @default("")
+  visitorHash String             @default("")
+  ipHash      String             @default("")
+  country     String             @default("")
+  device      String             @default("")
+  browser     String             @default("")
+  metadata    Json               @default("{}")
+  createdAt   DateTime           @default(now())
+
+  profile Profile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, type, createdAt])
+  @@index([userId, createdAt])
+}
+
+model ProfileView {
+  id          String   @id @default(cuid())
+  profileId   String
+  visitorHash String
+  referrer    String   @default("")
+  country     String   @default("")
+  device      String   @default("")
+  browser     String   @default("")
+  createdAt   DateTime @default(now())
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, createdAt])
+  @@index([profileId, visitorHash])
+}
+
+model LinkClick {
+  id          String   @id @default(cuid())
+  linkId      String
+  profileId   String
+  visitorHash String
+  referrer    String   @default("")
+  country     String   @default("")
+  device      String   @default("")
+  browser     String   @default("")
+  createdAt   DateTime @default(now())
+
+  link    Link    @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([linkId, createdAt])
+  @@index([profileId, createdAt])
+}
+
+model Report {
+  id             String           @id @default(cuid())
+  reporterUserId String?
+  targetType     ReportTargetType
+  targetId       String
+  reason         String
+  details        String           @default("")
+  status         ReportStatus     @default(OPEN)
+  reviewerUserId String?
+  resolution     String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  reporter User? @relation("ReporterReports", fields: [reporterUserId], references: [id], onDelete: SetNull)
+  reviewer User? @relation("ReviewerReports", fields: [reviewerUserId], references: [id], onDelete: SetNull)
+
+  @@index([targetType, targetId])
+  @@index([status, createdAt])
+}
+
+model AdminAuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String?
+  action      String
+  targetType  String
+  targetId    String
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now())
+
+  actor User? @relation("ActorAuditLogs", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([actorUserId, createdAt])
+  @@index([targetType, targetId])
+}
+
+model ReservedUsername {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  normalized  String   @unique
+  reason      String   @default("reserved")
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  createdBy User? @relation(fields: [createdById], references: [id], onDelete: SetNull)
+}
+
+model Announcement {
+  id          String    @id @default(cuid())
+  title       String
+  body        String
+  tone        String    @default("info")
+  isActive    Boolean   @default(true)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  createdBy User? @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([isActive, startsAt, endsAt])
+}
