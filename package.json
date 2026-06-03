@@ -1,0 +1,21 @@
+{
+  "name": "vyntra-bio",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Self-hosted creator bio-link and profile-card platform.",
+  "workspaces": [
+    "apps/backend",
+    "apps/frontend"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces",
+    "build": "npm run build --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "seed": "npm run seed -w @vyntra/backend",
+    "prisma:generate": "npm run prisma:generate -w @vyntra/backend"
+  },
+  "engines": {
+    "node": ">=20.19.0",
+    "npm": ">=10.0.0"
+  }
+}

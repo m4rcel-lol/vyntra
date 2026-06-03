@@ -1,0 +1,1 @@
+var e=`vyntra:`,t={get(t,n=null){try{let r=window.localStorage.getItem(e+t);return r?JSON.parse(r):n}catch{return n}},set(t,n){try{window.localStorage.setItem(e+t,JSON.stringify(n))}catch{}},remove(t){try{window.localStorage.removeItem(e+t)}catch{}}};export{t};

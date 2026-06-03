@@ -1,0 +1,1 @@
+import{n as e,p as t}from"./Logo-Dfm2F80N.js";var n=t(),r=({as:t=`span`,className:r,children:i,...a})=>(0,n.jsx)(t,{className:e(`text-chrome`,r),...a,children:i});export{r as t};
