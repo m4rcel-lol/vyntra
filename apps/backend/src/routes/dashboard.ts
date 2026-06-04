@@ -43,6 +43,8 @@ export async function registerDashboardRoutes(app: FastifyInstance): Promise<voi
 
     if (!profile) fail(404, "PROFILE_NOT_FOUND", "Profile was not found");
     const fileById = new Map(profile.files.map((file) => [file.id, file]));
+    const musicActivity = asRecord(profile.musicActivity);
+    const musicCoverFileId = typeof musicActivity.coverFileId === "string" ? musicActivity.coverFileId : "";
     const { files: _files, ...profileFields } = profile;
     const profileWithAssets = {
       ...profileFields,
@@ -51,6 +53,7 @@ export async function registerDashboardRoutes(app: FastifyInstance): Promise<voi
         banner: serializeAsset(request, profile.bannerFileId ? fileById.get(profile.bannerFileId) : null),
         background: serializeAsset(request, profile.backgroundFileId ? fileById.get(profile.backgroundFileId) : null),
         audio: serializeAsset(request, profile.audioFileId ? fileById.get(profile.audioFileId) : null),
+        musicCover: serializeAsset(request, musicCoverFileId ? fileById.get(musicCoverFileId) : null),
         cursor: serializeAsset(request, profile.cursorFileId ? fileById.get(profile.cursorFileId) : null),
         metadata: serializeAsset(request, profile.metadataFileId ? fileById.get(profile.metadataFileId) : null)
       }
@@ -78,4 +81,8 @@ export async function registerDashboardRoutes(app: FastifyInstance): Promise<voi
       announcements
     };
   });
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }

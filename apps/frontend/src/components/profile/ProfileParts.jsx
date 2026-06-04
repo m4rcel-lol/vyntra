@@ -1,6 +1,7 @@
 import { MapPin, CalendarDays, Hash, Eye, BadgeCheck } from 'lucide-react';
 import { formatDate, formatNumber } from '@/utils/format';
 import { cn } from '@/lib/utils';
+import { getBadgeBySlug } from './badgeUtils';
 
 export const ProfileAvatar = ({ profile, size = 96, className }) => {
   const accent = `hsl(${profile.accent})`;
@@ -12,23 +13,15 @@ export const ProfileAvatar = ({ profile, size = 96, className }) => {
         className="h-full w-full rounded-3xl border-2 border-background object-cover"
         style={{ boxShadow: `0 0 36px -8px ${accent}` }}
       />
-      <span className="absolute bottom-1 right-1 h-4 w-4 rounded-full border-2 border-background bg-success" />
     </div>
   );
 };
 
 export const ProfileIdentity = ({ profile, align = 'center', className }) => {
-  const verified = profile.badges?.some((b) => {
-    const value = `${b.slug || ''} ${b.label || ''} ${b.name || ''}`.toLowerCase();
-    return value.includes('verified');
-  });
   return (
     <div className={cn(align === 'center' ? 'text-center' : 'text-left', className)}>
-      <div className={cn('flex items-center gap-1.5', align === 'center' && 'justify-center')}>
-        <h1 className="font-display text-2xl font-semibold tracking-tight">{profile.displayName}</h1>
-        {verified && <BadgeCheck className="h-5 w-5" style={{ color: `hsl(${profile.accent})` }} />}
-      </div>
-      <p className="text-sm text-muted-foreground">@{profile.username}</p>
+      <h1 className="font-display text-2xl font-semibold tracking-tight">{profile.displayName}</h1>
+      <ProfileUsername profile={profile} align={align} />
       {profile.status && (
         <span className={cn('mt-2 inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary/40 px-3 py-1 text-xs text-foreground/80', align === 'center' ? 'mx-auto' : '')}>
           <span className="h-1.5 w-1.5 rounded-full" style={{ background: `hsl(${profile.accent})` }} />
@@ -37,6 +30,29 @@ export const ProfileIdentity = ({ profile, align = 'center', className }) => {
       )}
       {profile.bio && <p className="mt-3 text-sm leading-relaxed text-foreground/80">{profile.bio}</p>}
     </div>
+  );
+};
+
+export const ProfileUsername = ({ profile, align = 'center', className, muted = true, as: Component = 'p' }) => {
+  const verifiedBadge = getBadgeBySlug(profile.badges, 'verified');
+  return (
+    <Component
+      className={cn(
+        'inline-flex min-w-0 items-center gap-1.5 text-sm',
+        muted && 'text-muted-foreground',
+        align === 'center' && 'justify-center',
+        className
+      )}
+    >
+      <span className="truncate">@{profile.username}</span>
+      {verifiedBadge && (
+        <BadgeCheck
+          className="h-4 w-4 shrink-0 text-sky-300"
+          aria-label="Verified"
+          title={verifiedBadge.tooltip || verifiedBadge.label || 'Verified'}
+        />
+      )}
+    </Component>
   );
 };
 

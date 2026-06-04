@@ -93,6 +93,9 @@ export const PROFILE_LAYOUTS = [
   { key: 'floating', label: 'Floating', desc: 'Floating glass card in space' },
   { key: 'terminal', label: 'Terminal', desc: 'Monospaced hacker console' },
   { key: 'portfolio', label: 'Portfolio Grid', desc: 'Grid of work + links' },
+  { key: 'spotlight', label: 'Spotlight', desc: 'Large hero identity with featured links' },
+  { key: 'stacked', label: 'Stacked Links', desc: 'Banner, avatar, then clean link stack' },
+  { key: 'editorial', label: 'Editorial', desc: 'Magazine-style profile and content grid' },
 ];
 
 export const BACKGROUND_TYPES = ['solid', 'gradient', 'image', 'gif', 'video'];

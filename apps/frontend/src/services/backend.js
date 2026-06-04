@@ -264,6 +264,12 @@ export const adminApi = {
   async removeBadge(profileId, badgeId) {
     return api(`/api/admin/profiles/${profileId}/badges/${badgeId}`, { method: 'DELETE' });
   },
+  async resetProfileViews(profileId, mode = 'zero') {
+    return api(`/api/admin/profiles/${profileId}/views/reset`, {
+      method: 'POST',
+      body: JSON.stringify({ mode }),
+    });
+  },
   async reports() {
     const result = await api('/api/admin/reports');
     return result.reports;
@@ -355,10 +361,14 @@ function mapProfileResponse(response) {
   const accent = hexToHsl(theme.accentColor || '#ffffff');
   const particles = effects.particles || 'stars';
   const musicActivity = asObject(profile.musicActivity);
+  const audioMetadata = asObject(assets.audio?.metadata);
+  const embeddedCover = asObject(audioMetadata.cover);
   const audioUrl = assets.audio?.url || '';
   const hasMusic = Boolean(audioUrl);
-  const musicTitle = musicActivity.title || assets.audio?.originalName || '';
-  const musicArtist = musicActivity.artist || username;
+  const musicTitle = cleanTrackTitle(musicActivity.title || audioMetadata.title || titleFromAsset(assets.audio));
+  const musicArtist = cleanTrackTitle(musicActivity.artist || audioMetadata.artist || username);
+  const musicCover = assets.musicCover?.url || musicActivity.cover || embeddedCover.url || '';
+  const musicCoverFileId = assets.musicCover?.id ?? musicActivity.coverFileId ?? embeddedCover.fileId ?? null;
 
   return {
     id: profile.id,
@@ -400,7 +410,8 @@ function mapProfileResponse(response) {
       enabled: hasMusic,
       title: hasMusic ? musicTitle : '',
       artist: hasMusic ? musicArtist : '',
-      cover: banner,
+      cover: hasMusic ? musicCover : '',
+      coverFileId: hasMusic ? musicCoverFileId : null,
       loop: musicActivity.loop !== false,
       volume: Number.isFinite(Number(musicActivity.volume)) ? Math.max(0, Math.min(100, Number(musicActivity.volume))) : 45,
       src: audioUrl,
@@ -433,7 +444,7 @@ function mapProfileResponse(response) {
     spotifyActivity: hasMusic ? {
       track: musicTitle,
       artist: musicArtist,
-      cover: banner,
+      cover: musicCover,
       progress: Number.isFinite(Number(musicActivity.progress)) ? Math.max(0, Math.min(100, Number(musicActivity.progress))) : 42,
     } : null,
     assetIds: {
@@ -441,6 +452,7 @@ function mapProfileResponse(response) {
       bannerFileId: assets.banner?.id ?? null,
       backgroundFileId: assets.background?.id ?? null,
       audioFileId: assets.audio?.id ?? null,
+      musicCoverFileId: musicCoverFileId,
       cursorFileId: assets.cursor?.id ?? null,
       metadataFileId: assets.metadata?.id ?? null,
     },
@@ -456,6 +468,8 @@ function profileToPatch(profile) {
     musicActivity: profile.music ? {
       title: profile.music.title || '',
       artist: profile.music.artist || '',
+      cover: profile.music.cover || '',
+      coverFileId: profile.music.coverFileId || profile.assetIds?.musicCoverFileId || null,
       loop: profile.music.loop !== false,
       volume: Math.max(0, Math.min(100, Number(profile.music.volume ?? 45))),
     } : undefined,
@@ -642,6 +656,9 @@ function mapLayout(layout) {
     case 'floating-card': return 'floating';
     case 'terminal': return 'terminal';
     case 'portfolio-grid': return 'portfolio';
+    case 'spotlight': return 'spotlight';
+    case 'stacked-links': return 'stacked';
+    case 'editorial': return 'editorial';
     default: return 'centered';
   }
 }
@@ -654,6 +671,9 @@ function unmapLayout(layout) {
     case 'floating': return 'floating-card';
     case 'terminal': return 'terminal';
     case 'portfolio': return 'portfolio-grid';
+    case 'spotlight': return 'spotlight';
+    case 'stacked': return 'stacked-links';
+    case 'editorial': return 'editorial';
     default: return 'centered-glass';
   }
 }
@@ -702,6 +722,15 @@ function findEmbed(embeds, type) {
 
 function asObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function titleFromAsset(asset) {
+  const name = asset?.metadata?.title || asset?.originalName || '';
+  return cleanTrackTitle(String(name).replace(/\.[^/.]+$/, ''));
+}
+
+function cleanTrackTitle(value) {
+  return String(value || '').replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 function normalizeUrl(value) {

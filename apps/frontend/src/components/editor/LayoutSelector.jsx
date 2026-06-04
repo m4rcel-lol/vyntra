@@ -10,6 +10,9 @@ const ICONS = {
   floating: Layers,
   terminal: TerminalSquare,
   portfolio: LayoutGrid,
+  spotlight: Layers,
+  stacked: Rows,
+  editorial: LayoutGrid,
 };
 
 export const LayoutSelector = ({ value, onChange }) => (

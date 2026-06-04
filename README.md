@@ -85,11 +85,31 @@ Backend health: <http://localhost:3000/health>
 ```bash
 npm install
 npm run prisma:generate
+npm run dev
+```
+
+`npm run dev` starts local PostgreSQL and Valkey from `.dev/postgres` and `.dev/valkey`, then starts the backend and frontend workspaces. Those `.dev` directories are persistent; do not delete them unless you intentionally want to reset local data.
+
+If you only need the local services:
+
+```bash
+npm run dev:services
+```
+
+To stop the local services:
+
+```bash
+npm run dev:stop
+```
+
+Before shipping changes:
+
+```bash
 npm run typecheck
 npm run build
 ```
 
-For local backend development you still need PostgreSQL and Valkey available through the URLs in `.env`. Audio/video compression requires `ffmpeg`; image compression uses `sharp`. The production backend image includes both.
+For local backend development outside `npm run dev`, PostgreSQL and Valkey must be available through the URLs in `.env`. Audio/video compression requires `ffmpeg`; image compression uses `sharp`. The production backend image includes both.
 
 ## Production Notes
 

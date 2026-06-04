@@ -7,6 +7,7 @@ const adminUsername = process.env.SEED_ADMIN_USERNAME ?? "owner";
 const adminEmail = process.env.SEED_ADMIN_EMAIL ?? "owner@example.com";
 const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? "ChangeMeNow123!";
 const ownerBio = "Self-hosted creator identity, without locked feature tiers.";
+const protectedOwnerUsernames = Array.from(new Set([adminUsername, "owner", "m5rcel"].map((name) => name.toLowerCase())));
 
 const globalBadges = [
   ["owner", "Owner", "#facc15", "#facc15", "Platform owner"],
@@ -35,6 +36,7 @@ const reserved = [
   "health",
   "login",
   "logout",
+  "perks",
   "register",
   "settings",
   "templates",
@@ -209,10 +211,30 @@ async function main() {
 
   const ownerBadge = await prisma.badge.findUnique({ where: { slug: "owner" } });
   const unlimitedBadge = await prisma.badge.findUnique({ where: { slug: "unlimited" } });
-  if (admin.profile && ownerBadge && unlimitedBadge) {
+  if (ownerBadge) {
+    const protectedOwners = await prisma.user.findMany({
+      where: { username: { in: protectedOwnerUsernames } },
+      include: { profile: true }
+    });
+    const ownerAssignments = protectedOwners
+      .filter((user) => user.profile)
+      .map((user) => ({
+        profileId: user.profile!.id,
+        badgeId: ownerBadge.id,
+        assignedById: admin.id,
+        order: 0
+      }));
+    if (ownerAssignments.length > 0) {
+      await prisma.userBadge.createMany({
+        data: ownerAssignments,
+        skipDuplicates: true
+      });
+    }
+  }
+
+  if (admin.profile && unlimitedBadge) {
     await prisma.userBadge.createMany({
       data: [
-        { profileId: admin.profile.id, badgeId: ownerBadge.id, assignedById: admin.id, order: 0 },
         { profileId: admin.profile.id, badgeId: unlimitedBadge.id, assignedById: admin.id, order: 1 }
       ],
       skipDuplicates: true

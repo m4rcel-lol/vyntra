@@ -33,6 +33,7 @@ enum FileAssetKind {
   TEMPLATE_PREVIEW
   CUSTOM_ICON
   METADATA_IMAGE
+  MUSIC_COVER
   OTHER
 }
 
@@ -246,6 +247,7 @@ model FileAsset {
   mimeType     String
   sizeBytes    Int
   checksum     String?
+  metadata     Json         @default("{}")
   isPublic     Boolean       @default(true)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
@@ -297,6 +299,7 @@ model ProfileView {
 
   @@index([profileId, createdAt])
   @@index([profileId, visitorHash])
+  @@unique([profileId, visitorHash])
 }
 
 model LinkClick {

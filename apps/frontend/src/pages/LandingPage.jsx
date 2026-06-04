@@ -24,7 +24,7 @@ import { cn } from '@/lib/utils';
 const PROOF = ['Streamers', 'Designers', 'Musicians', 'Developers', 'Gamers', 'Photographers', 'Founders', 'Artists'];
 
 const FEATURES = [
-  { icon: Layers, title: '7 cinematic layouts', desc: 'Centered, wide, minimal, sidebar, floating, terminal & portfolio grid. Switch in one click.' },
+  { icon: Layers, title: '10 cinematic layouts', desc: 'Centered, wide, minimal, sidebar, floating, terminal, portfolio, spotlight, stacked, and editorial. Switch in one click.' },
   { icon: Palette, title: 'Total customization', desc: 'Gradients, images, GIFs and video backgrounds with blur, overlays and accent control.' },
   { icon: Wand2, title: 'Living effects', desc: 'Particles, snow, rain, stars, glow borders, cursor trails and a click-to-enter intro.' },
   { icon: Music, title: 'Background audio', desc: 'Set a signature track with a frosted player. Never autoplays without consent.' },

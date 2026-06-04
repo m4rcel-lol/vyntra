@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   Users, Flag, Award, FileWarning, ShieldAlert, BadgeCheck, Ban, CheckCircle2,
-  KeyRound, Plus, Search, X, Eye,
+  KeyRound, Plus, Search, X, Eye, RotateCcw, LockKeyhole,
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { StatCard } from '@/components/common/StatCard';
@@ -30,6 +30,8 @@ const emptyBadgeForm = {
 };
 
 const roleOptions = ['user', 'moderator', 'admin'];
+const protectedBadgeSlugs = new Set(['owner']);
+const isProtectedBadge = (badge) => protectedBadgeSlugs.has(String(badge?.slug || '').toLowerCase());
 
 export default function AdminPage() {
   const queryClient = useQueryClient();
@@ -51,7 +53,8 @@ export default function AdminPage() {
   const selectedUser = users.find((user) => user.id === selectedUserId) ?? users[0] ?? null;
   const verifiedBadge = badges.find((badge) => badge.slug === 'verified');
   const selectedBadgeIds = new Set(selectedUser?.badges?.map((badge) => badge.id) ?? []);
-  const assignableBadges = badges.filter((badge) => !selectedBadgeIds.has(badge.id));
+  const assignableBadges = badges.filter((badge) => !selectedBadgeIds.has(badge.id) && !isProtectedBadge(badge));
+  const badgeFormIsProtected = isProtectedBadge(badgeForm);
 
   const filteredUsers = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -109,6 +112,15 @@ export default function AdminPage() {
     onError: (error) => toast.error(error.message || 'Could not remove badge'),
   });
 
+  const resetViews = useMutation({
+    mutationFn: ({ profileId, mode }) => adminService.resetProfileViews(profileId, mode),
+    onSuccess: () => {
+      invalidateAdmin();
+      toast.success('Profile views reset');
+    },
+    onError: (error) => toast.error(error.message || 'Could not reset views'),
+  });
+
   const selectedIsVerified = !!selectedUser?.badges?.some((badge) => badge.slug === 'verified');
 
   const toggleVerified = (user = selectedUser) => {
@@ -141,6 +153,13 @@ export default function AdminPage() {
     if (!selectedUser || !newPassword) return;
     updateUser.mutate({ id: selectedUser.id, patch: { newPassword } });
     setNewPassword('');
+  };
+
+  const resetSelectedViews = () => {
+    if (!selectedUser?.profileId) return;
+    const confirmed = window.confirm(`Reset all views and view analytics for @${selectedUser.username}? This cannot be undone.`);
+    if (!confirmed) return;
+    resetViews.mutate({ profileId: selectedUser.profileId, mode: 'zero' });
   };
 
   return (
@@ -283,6 +302,7 @@ export default function AdminPage() {
               }
               onSaveBanReason={(reason) => selectedUser && updateUser.mutate({ id: selectedUser.id, patch: { banReason: reason || null } })}
               onResetPassword={resetSelectedPassword}
+              onResetViews={resetSelectedViews}
             />
           </div>
         </TabsContent>
@@ -322,9 +342,12 @@ export default function AdminPage() {
                   </label>
                 </div>
                 <div className="flex gap-2">
-                  <Button type="submit" disabled={upsertBadge.isPending}><Plus className="h-4 w-4" /> Save badge</Button>
+                  <Button type="submit" disabled={upsertBadge.isPending || badgeFormIsProtected}><Plus className="h-4 w-4" /> Save badge</Button>
                   <Button type="button" variant="outline" onClick={() => setBadgeForm(emptyBadgeForm)}>Clear</Button>
                 </div>
+                {badgeFormIsProtected && (
+                  <p className="text-xs text-muted-foreground">The Owner badge is system protected and cannot be edited from the admin panel.</p>
+                )}
               </form>
             </GlassCard>
 
@@ -332,18 +355,26 @@ export default function AdminPage() {
               <h3 className="font-display text-lg font-semibold">Badge library</h3>
               <p className="mt-1 text-sm text-muted-foreground">Click a badge to load it into the editor.</p>
               <div className="mt-5 grid gap-3 md:grid-cols-2">
-                {badges.map((badge) => (
+                {badges.map((badge) => {
+                  const protectedBadge = isProtectedBadge(badge);
+                  return (
                   <button
                     key={badge.id}
-                    onClick={() => setBadgeForm({
-                      slug: badge.slug,
-                      name: badge.name,
-                      description: badge.description,
-                      tooltip: badge.tooltip,
-                      color: badge.color,
-                      glowColor: badge.glowColor,
-                    })}
-                    className="rounded-2xl border border-border bg-secondary/20 p-4 text-left transition-colors hover:bg-secondary/40"
+                    onClick={() => {
+                      if (protectedBadge) return;
+                      setBadgeForm({
+                        slug: badge.slug,
+                        name: badge.name,
+                        description: badge.description,
+                        tooltip: badge.tooltip,
+                        color: badge.color,
+                        glowColor: badge.glowColor,
+                      });
+                    }}
+                    className={cn(
+                      'rounded-2xl border border-border bg-secondary/20 p-4 text-left transition-colors hover:bg-secondary/40',
+                      protectedBadge && 'cursor-not-allowed opacity-75 hover:bg-secondary/20'
+                    )}
                   >
                     <div className="flex items-center gap-3">
                       <span
@@ -357,11 +388,16 @@ export default function AdminPage() {
                         <p className="truncate text-xs text-muted-foreground">{badge.slug}</p>
                       </div>
                       {badge.slug === 'verified' && <BadgeCheck className="ml-auto h-4 w-4 text-sky-300" />}
+                      {protectedBadge && <LockKeyhole className="ml-auto h-4 w-4 text-amber-300" />}
                     </div>
                     <p className="mt-3 line-clamp-2 text-xs text-muted-foreground">{badge.tooltip || badge.description || 'No tooltip set.'}</p>
-                    <p className="mt-3 text-xs text-muted-foreground">{formatNumber(badge.assignmentCount)} assigned</p>
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      {formatNumber(badge.assignmentCount)} assigned
+                      {protectedBadge ? ' · system protected' : ''}
+                    </p>
                   </button>
-                ))}
+                  );
+                })}
               </div>
             </GlassCard>
           </div>
@@ -417,6 +453,7 @@ function UserManagementCard({
   onToggleBan,
   onSaveBanReason,
   onResetPassword,
+  onResetViews,
 }) {
   const [banReasonDraft, setBanReasonDraft] = useState('');
 
@@ -463,6 +500,10 @@ function UserManagementCard({
       </div>
 
       <div className="mt-5 grid gap-4">
+        <Button variant="outline" disabled={!user.profileId || user.views <= 0} onClick={onResetViews}>
+          <RotateCcw className="h-4 w-4" /> Reset profile views
+        </Button>
+
         <label className="space-y-2 text-sm">
           <span>Role</span>
           <Select value={user.role} onValueChange={onUpdateRole}>
@@ -494,15 +535,22 @@ function UserManagementCard({
         <div className="space-y-2">
           <p className="text-sm font-medium">Assigned badges</p>
           <div className="flex flex-wrap gap-2">
-            {(user.badges ?? []).map((badge) => (
-              <span key={badge.id} className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary/40 px-2.5 py-1 text-xs">
-                <Icon name={badge.icon} fallback="Award" className="h-3.5 w-3.5" />
-                {badge.name}
-                <button onClick={() => onRemoveBadge(badge.id)} className="ml-1 text-muted-foreground transition-colors hover:text-destructive" aria-label={`Remove ${badge.name}`}>
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            ))}
+            {(user.badges ?? []).map((badge) => {
+              const protectedBadge = isProtectedBadge(badge);
+              return (
+                <span key={badge.id} className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary/40 px-2.5 py-1 text-xs">
+                  <Icon name={badge.icon} fallback="Award" className="h-3.5 w-3.5" />
+                  {badge.name}
+                  {protectedBadge ? (
+                    <LockKeyhole className="ml-1 h-3 w-3 text-amber-300" aria-label="System protected" />
+                  ) : (
+                    <button onClick={() => onRemoveBadge(badge.id)} className="ml-1 text-muted-foreground transition-colors hover:text-destructive" aria-label={`Remove ${badge.name}`}>
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </span>
+              );
+            })}
             {!user.badges?.length && <p className="text-sm text-muted-foreground">No badges assigned yet.</p>}
           </div>
         </div>

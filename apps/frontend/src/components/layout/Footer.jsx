@@ -40,9 +40,15 @@ export const Footer = () => (
             <ul className="mt-4 space-y-3">
               {col.links.map((l) => (
                 <li key={l}>
-                  <a href="#" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-                    {l}
-                  </a>
+                  {l === 'Free features' ? (
+                    <Link to="/perks" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+                      {l}
+                    </Link>
+                  ) : (
+                    <a href="#" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+                      {l}
+                    </a>
+                  )}
                 </li>
               ))}
             </ul>
