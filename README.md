@@ -50,8 +50,13 @@ cp .env.example .env
 
 ```bash
 COOKIE_SECRET=replace-with-at-least-32-random-characters
+POSTGRES_PASSWORD=replace-with-a-long-random-url-safe-database-password
 SEED_ADMIN_PASSWORD=ChangeMeNow123!
 ```
+
+Docker Compose reads database credentials from `.env`. The backend container gets an internal `DATABASE_URL` automatically built from `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB`, pointing at the `postgres` service. You do not need to put database passwords directly in `docker-compose.yml`. Use a URL-safe database password such as letters, numbers, `_`, or `-` because it is inserted into a PostgreSQL connection URL.
+
+`FRONTEND_PORT` and `BACKEND_PORT` control the host ports exposed by Docker. The backend container still listens internally on `3000`, which keeps health checks and service-to-service networking stable.
 
 3. Build and start the stack:
 
@@ -79,6 +84,14 @@ docker compose logs -f
 
 Frontend: <http://localhost:8080>  
 Backend health: <http://localhost:3000/health>
+
+If `vyntra-backend-1` is unhealthy, check the backend logs first:
+
+```bash
+docker compose logs backend
+```
+
+The most common causes are a missing `.env`, a short `COOKIE_SECRET`, or database credentials in `.env` that do not match the existing `postgres_data` volume. If you changed `POSTGRES_USER`, `POSTGRES_PASSWORD`, or `POSTGRES_DB` after the first boot, either restore the old values or intentionally recreate the database volume.
 
 ## Local Development
 
@@ -114,8 +127,9 @@ For local backend development outside `npm run dev`, PostgreSQL and Valkey must 
 ## Production Notes
 
 - Set `NODE_ENV=production`.
-- Use long random values for `COOKIE_SECRET` and `POSTGRES_PASSWORD`.
+- Use long random values for `COOKIE_SECRET` and a URL-safe `POSTGRES_PASSWORD`.
 - Set `PUBLIC_APP_URL`, `FRONTEND_ORIGIN`, and `API_PUBLIC_URL` to your public HTTPS URLs.
+- Keep secrets in `.env`; the Compose file references environment variables and does not need hardcoded passwords.
 - Keep `TRUST_PROXY=true` when running behind Caddy, Nginx, or Traefik.
 - Terminate TLS at the reverse proxy and forward `/api/*`, `/socket.io/*`, and `/health` to the backend.
 - The backend stores only hashed session tokens and anonymized visitor hashes.

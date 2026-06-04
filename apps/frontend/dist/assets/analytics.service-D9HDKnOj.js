@@ -1,1 +1,0 @@
-import{a as e}from"./index-BurVIU70.js";var t={getAnalytics:(t=`30d`)=>e.summary(t)};export{t};

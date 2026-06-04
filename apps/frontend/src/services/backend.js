@@ -619,7 +619,7 @@ function mapTemplate(template) {
     style: capitalize(template.style || 'dark'),
     preview: template.preview?.url || WALLPAPERS.mesh2,
     accent: '0 0% 90%',
-    layout: 'centered',
+    layout: 'minimal',
     uses: template.importCount ?? 0,
     likes: template.likeCount ?? 0,
     tags: template.tags ?? [template.style || 'dark'],
@@ -659,7 +659,7 @@ function mapLayout(layout) {
     case 'spotlight': return 'spotlight';
     case 'stacked-links': return 'stacked';
     case 'editorial': return 'editorial';
-    default: return 'centered';
+    default: return 'minimal';
   }
 }
 
@@ -674,7 +674,7 @@ function unmapLayout(layout) {
     case 'spotlight': return 'spotlight';
     case 'stacked': return 'stacked-links';
     case 'editorial': return 'editorial';
-    default: return 'centered-glass';
+    default: return 'minimal-text';
   }
 }
 

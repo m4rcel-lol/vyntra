@@ -60,7 +60,7 @@ async function main() {
           displayName: "Vyntra Owner",
           bio: ownerBio,
           location: "Vyntra.bio",
-          layout: "centered-glass",
+          layout: "minimal-text",
           theme: {
             accentColor: "#d8d8d8",
             textColor: "#ffffff",
@@ -111,12 +111,13 @@ async function main() {
         displayName: "Vyntra Owner",
         bio: ownerBio,
         location: "Vyntra.bio",
+        layout: "minimal-text",
         statusText: "Creating something memorable"
       }
     });
 
     const starterSnapshot = {
-      layout: "centered-glass",
+      layout: "minimal-text",
       statusText: "Creating something memorable",
       theme: {
         accentColor: "#d8d8d8",

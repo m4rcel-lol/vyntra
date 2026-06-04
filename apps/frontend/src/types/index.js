@@ -86,9 +86,9 @@
  */
 
 export const PROFILE_LAYOUTS = [
+  { key: 'minimal', label: 'Minimal', desc: 'Stripped-back, text first' },
   { key: 'centered', label: 'Centered Card', desc: 'Classic centered profile card' },
   { key: 'wide', label: 'Wide Card', desc: 'Horizontal banner-led layout' },
-  { key: 'minimal', label: 'Minimal', desc: 'Stripped-back, text first' },
   { key: 'sidebar', label: 'Sidebar', desc: 'Identity left, content right' },
   { key: 'floating', label: 'Floating', desc: 'Floating glass card in space' },
   { key: 'terminal', label: 'Terminal', desc: 'Monospaced hacker console' },

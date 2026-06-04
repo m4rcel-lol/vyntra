@@ -40,6 +40,7 @@ export async function registerAuthRoutes(app) {
                     profile: {
                         create: {
                             displayName: username,
+                            layout: "minimal-text",
                             theme: defaultTheme(),
                             effects: defaultEffects(),
                             metadata: {

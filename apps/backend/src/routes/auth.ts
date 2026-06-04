@@ -46,6 +46,7 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
           profile: {
             create: {
               displayName: username,
+              layout: "minimal-text",
               theme: defaultTheme(),
               effects: defaultEffects(),
               metadata: {

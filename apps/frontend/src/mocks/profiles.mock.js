@@ -41,7 +41,7 @@ export const createDefaultProfile = (overrides = {}) => ({
   uid: '0000001',
   views: 0,
   accent: '262 83% 66%',
-  layout: 'centered',
+  layout: 'minimal',
   background: { ...defaultBackground },
   effects: { ...defaultEffects },
   links: pickLinks(['l_x', 'l_ig', 'l_gh']),
