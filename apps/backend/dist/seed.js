@@ -7,6 +7,7 @@ const adminEmail = process.env.SEED_ADMIN_EMAIL ?? "owner@example.com";
 const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? "ChangeMeNow123!";
 const ownerBio = "Self-hosted creator identity, without locked feature tiers.";
 const protectedOwnerUsernames = Array.from(new Set([adminUsername, "owner", "m5rcel"].map((name) => name.toLowerCase())));
+const normalizedAdminUsername = adminUsername.toLowerCase();
 const globalBadges = [
     ["owner", "Owner", "#facc15", "#facc15", "Platform owner"],
     ["staff", "Staff", "#38bdf8", "#38bdf8", "Vyntra.bio staff"],
@@ -43,11 +44,15 @@ const reserved = [
     "security"
 ];
 async function main() {
+    const existingAdmin = await prisma.user.findUnique({
+        where: { username: normalizedAdminUsername },
+        include: { profile: true }
+    });
     const passwordHash = await hashPassword(adminPassword);
     const admin = await prisma.user.upsert({
-        where: { username: adminUsername.toLowerCase() },
+        where: { username: normalizedAdminUsername },
         create: {
-            username: adminUsername.toLowerCase(),
+            username: normalizedAdminUsername,
             email: adminEmail.toLowerCase(),
             passwordHash,
             role: "OWNER",
@@ -99,9 +104,35 @@ async function main() {
         },
         include: { profile: true }
     });
-    if (admin.profile) {
+    const adminProfile = admin.profile ?? await prisma.profile.create({
+        data: {
+            userId: admin.id,
+            displayName: admin.username,
+            bio: ownerBio,
+            location: "Vyntra.bio",
+            layout: "minimal-text",
+            theme: {
+                accentColor: "#d8d8d8",
+                textColor: "#ffffff",
+                cardOpacity: 0.72,
+                cardBlur: 24,
+                borderGlow: true
+            },
+            effects: {
+                particles: "stars",
+                entranceAnimation: "scale",
+                hoverAnimation: "lift",
+                backgroundAnimation: "gradient"
+            },
+            metadata: {
+                title: `${admin.username} on Vyntra.bio`,
+                description: "A creator profile powered by Vyntra.bio"
+            }
+        }
+    });
+    if (adminProfile && !existingAdmin?.profile && admin.profile) {
         await prisma.profile.update({
-            where: { id: admin.profile.id },
+            where: { id: adminProfile.id },
             data: {
                 displayName: "Vyntra Owner",
                 bio: ownerBio,
@@ -110,6 +141,8 @@ async function main() {
                 statusText: ""
             }
         });
+    }
+    if (adminProfile) {
         const starterSnapshot = {
             layout: "minimal-text",
             statusText: "",
@@ -213,10 +246,10 @@ async function main() {
     for (const roleUser of roleUsers) {
         await syncRoleBadgeForUserId({ prisma, userId: roleUser.id, assignedById: admin.id });
     }
-    if (admin.profile && unlimitedBadge) {
+    if (adminProfile && unlimitedBadge) {
         await prisma.userBadge.createMany({
             data: [
-                { profileId: admin.profile.id, badgeId: unlimitedBadge.id, assignedById: admin.id, order: 1 }
+                { profileId: adminProfile.id, badgeId: unlimitedBadge.id, assignedById: admin.id, order: 1 }
             ],
             skipDuplicates: true
         });

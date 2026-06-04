@@ -12,14 +12,8 @@ export type PublicAsset = {
   metadata: Record<string, unknown>;
 };
 
-export function requestOrigin(request: FastifyRequest): string {
-  const proto = firstHeader(request.headers["x-forwarded-proto"]) ?? request.protocol;
-  const host = firstHeader(request.headers["x-forwarded-host"]) ?? request.headers.host ?? "localhost";
-  return `${proto}://${host}`;
-}
-
-export function assetUrl(request: FastifyRequest, publicId: string): string {
-  return `${requestOrigin(request)}/api/files/public/${publicId}`;
+export function assetUrl(_request: FastifyRequest, publicId: string): string {
+  return `/api/files/public/${publicId}`;
 }
 
 export function serializeAsset(request: FastifyRequest, asset: FileAsset | null | undefined): PublicAsset | null {
@@ -47,9 +41,4 @@ function serializeAssetMetadata(request: FastifyRequest, metadata: unknown): Rec
     result.cover = cover;
   }
   return result;
-}
-
-function firstHeader(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0];
-  return value;
 }

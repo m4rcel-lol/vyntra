@@ -44,11 +44,12 @@ export const MusicTab = () => {
           value={music.src}
           onChange={applyAudioUpload}
           label="Audio"
+          kind="AUDIO"
           aspect="aspect-[4/1]"
         />
       </Field>
       <Field label="Cover art" hint="If the audio file has no embedded artwork, upload a PNG, WebP, JPG, or GIF here. It will be compressed before storage.">
-        <FileUploadMock value={music.cover} onChange={applyCoverUpload} label="Music cover" aspect="aspect-square" />
+        <FileUploadMock value={music.cover} onChange={applyCoverUpload} label="Music cover" kind="MUSIC_COVER" aspect="aspect-square" />
       </Field>
       <ToggleRow icon={Repeat} label="Loop" checked={!!music.loop} onCheckedChange={(v) => setNested('music', 'loop', v)} />
       <Field label={`Volume · ${music.volume}%`}>

@@ -12,8 +12,9 @@ export const FileUploadMock = ({ value, onChange, label = 'Image', kind, aspect 
   const [url, setUrl] = useState('');
   const [error, setError] = useState('');
   const uploadKind = kind || '';
-  const isVideo = uploadKind === 'BACKGROUND_VIDEO' || label.toLowerCase().includes('video');
-  const isAudio = uploadKind === 'AUDIO' || label.toLowerCase().includes('audio') || label.toLowerCase().includes('music');
+  const hasExplicitKind = Boolean(uploadKind);
+  const isVideo = hasExplicitKind ? uploadKind === 'BACKGROUND_VIDEO' : label.toLowerCase().includes('video');
+  const isAudio = hasExplicitKind ? uploadKind === 'AUDIO' : label.toLowerCase().includes('audio') || label.toLowerCase().includes('music');
   const accept = isVideo
     ? 'video/mp4,video/webm'
     : isAudio

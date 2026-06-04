@@ -10,6 +10,5 @@ export type PublicAsset = {
     sizeBytes: number;
     metadata: Record<string, unknown>;
 };
-export declare function requestOrigin(request: FastifyRequest): string;
-export declare function assetUrl(request: FastifyRequest, publicId: string): string;
+export declare function assetUrl(_request: FastifyRequest, publicId: string): string;
 export declare function serializeAsset(request: FastifyRequest, asset: FileAsset | null | undefined): PublicAsset | null;
