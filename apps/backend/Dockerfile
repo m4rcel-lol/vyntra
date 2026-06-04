@@ -1,6 +1,6 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
-RUN apk add --no-cache libc6-compat python3 make g++ vips-dev ffmpeg
+RUN apk add --no-cache libc6-compat openssl python3 make g++ vips-dev ffmpeg
 COPY package.json package-lock.json* ./
 COPY apps/backend/package.json apps/backend/package.json
 COPY apps/frontend/package.json apps/frontend/package.json
@@ -15,7 +15,7 @@ RUN npm run build -w @vyntra/backend
 FROM node:22-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
-RUN apk add --no-cache libc6-compat wget ffmpeg vips
+RUN apk add --no-cache libc6-compat openssl wget ffmpeg vips
 COPY package.json package-lock.json* ./
 COPY apps/backend/package.json apps/backend/package.json
 COPY apps/frontend/package.json apps/frontend/package.json

@@ -46,15 +46,17 @@ docker-compose.caddy.yml
 cp .env.example .env
 ```
 
-2. Edit `.env` and replace all secrets:
+2. Generate env-safe secrets:
 
 ```bash
-COOKIE_SECRET=replace-with-at-least-32-random-characters
-POSTGRES_PASSWORD=replace-with-a-long-random-url-safe-database-password
-SEED_ADMIN_PASSWORD=ChangeMeNow123!
+openssl rand -hex 32
 ```
 
-Docker Compose reads database credentials from `.env`. The backend container gets an internal `DATABASE_URL` automatically built from `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB`, pointing at the `postgres` service. You do not need to put database passwords directly in `docker-compose.yml`. Use a URL-safe database password such as letters, numbers, `_`, or `-` because it is inserted into a PostgreSQL connection URL.
+Run that command once for `COOKIE_SECRET` and once for `POSTGRES_PASSWORD`, then paste the generated 64-character hex values into `.env`. Set `SEED_ADMIN_PASSWORD` to a strong password you can type that only uses letters, numbers, `_`, or `-`.
+
+Docker Compose reads database credentials from `.env`. The backend container gets an internal `DATABASE_URL` automatically built from `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB`, pointing at the `postgres` service. The backend service explicitly receives the required app secrets from `.env`, so you do not need to put passwords directly in `docker-compose.yml`.
+
+Production `.env` values must be safe for Docker Compose interpolation. Use letters, numbers, `_`, or `-`. Do not use `$`, quotes, spaces, backticks, or non-ASCII characters in unquoted values. The warning `variable is not set. Defaulting to a blank string` usually means a secret contains `$NAME` and Compose is trying to expand it.
 
 `FRONTEND_PORT` and `BACKEND_PORT` control the host ports exposed by Docker. The backend container still listens internally on `3000`, which keeps health checks and service-to-service networking stable.
 
@@ -91,7 +93,14 @@ If `vyntra-backend-1` is unhealthy, check the backend logs first:
 docker compose logs backend
 ```
 
-The most common causes are a missing `.env`, a short `COOKIE_SECRET`, or database credentials in `.env` that do not match the existing `postgres_data` volume. If you changed `POSTGRES_USER`, `POSTGRES_PASSWORD`, or `POSTGRES_DB` after the first boot, either restore the old values or intentionally recreate the database volume.
+The most common causes are a missing `.env`, missing `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD`, a short `COOKIE_SECRET`, Compose-unsafe secret characters such as `$`, or database credentials in `.env` that do not match the existing `postgres_data` volume. If you changed `POSTGRES_USER`, `POSTGRES_PASSWORD`, or `POSTGRES_DB` after the first boot, either restore the old values or intentionally recreate the database volume.
+
+If the backend logs mention `libssl.so.1.1` or `Prisma failed to detect the libssl/openssl version`, rebuild the backend image after updating. The backend Dockerfile installs OpenSSL and Prisma generates the Alpine OpenSSL 3 query engine:
+
+```bash
+docker compose build --no-cache backend
+docker compose up -d
+```
 
 ## Local Development
 
@@ -127,7 +136,7 @@ For local backend development outside `npm run dev`, PostgreSQL and Valkey must 
 ## Production Notes
 
 - Set `NODE_ENV=production`.
-- Use long random values for `COOKIE_SECRET` and a URL-safe `POSTGRES_PASSWORD`.
+- Use long env-safe random values for `COOKIE_SECRET`, `POSTGRES_PASSWORD`, and `SEED_ADMIN_PASSWORD`.
 - Set `PUBLIC_APP_URL`, `FRONTEND_ORIGIN`, and `API_PUBLIC_URL` to your public HTTPS URLs.
 - Keep secrets in `.env`; the Compose file references environment variables and does not need hardcoded passwords.
 - Keep `TRUST_PROXY=true` when running behind Caddy, Nginx, or Traefik.
