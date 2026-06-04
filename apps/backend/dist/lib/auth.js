@@ -114,6 +114,8 @@ export function assertCsrf(request) {
         return;
     if (request.url.startsWith("/api/auth/login") || request.url.startsWith("/api/auth/register"))
         return;
+    if (/^\/api\/profiles\/[^/]+\/view(?:\?|$)/.test(request.url))
+        return;
     const session = request.currentSession;
     if (!session)
         return;

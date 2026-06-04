@@ -47,7 +47,12 @@ export const PublicProfileRenderer = ({ profile, preview = false, forceEntered =
       </div>
 
       {entered && profile.music?.enabled && profile.music?.src && (
-        <MusicPlayer music={profile.music} accent={profile.accent} autoStart={viaClick} className="absolute bottom-4 left-4 z-20" />
+        <MusicPlayer
+          music={profile.music}
+          accent={profile.accent}
+          autoStart={viaClick}
+          className="absolute bottom-3 left-1/2 z-20 -translate-x-1/2 sm:bottom-4 sm:left-4 sm:translate-x-0"
+        />
       )}
 
       <AnimatePresence>

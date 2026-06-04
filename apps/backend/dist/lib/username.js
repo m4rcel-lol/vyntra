@@ -11,6 +11,7 @@ export const reservedRoutes = new Set([
     "health",
     "login",
     "logout",
+    "perks",
     "register",
     "settings",
     "templates",

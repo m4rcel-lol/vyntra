@@ -36,25 +36,40 @@ export async function registerTemplateRoutes(app) {
                     : {})
             },
             include: {
-                owner: { select: { username: true } },
+                owner: {
+                    select: {
+                        username: true,
+                        profile: {
+                            select: {
+                                avatarFileId: true,
+                                files: { where: { deletedAt: null, kind: "AVATAR" } }
+                            }
+                        }
+                    }
+                },
                 previewFile: true
             },
             orderBy: [{ likeCount: "desc" }, { importCount: "desc" }, { createdAt: "desc" }],
             take: 60
         });
         return {
-            templates: templates.map((template) => ({
-                id: template.id,
-                name: template.name,
-                description: template.description,
-                style: template.style,
-                tags: template.tags,
-                ownerUsername: template.owner.username,
-                importCount: template.importCount,
-                likeCount: template.likeCount,
-                preview: serializeAsset(request, template.previewFile),
-                createdAt: template.createdAt
-            }))
+            templates: templates.map((template) => {
+                const ownerFiles = template.owner.profile?.files ?? [];
+                const ownerFileById = new Map(ownerFiles.map((file) => [file.id, file]));
+                return {
+                    id: template.id,
+                    name: template.name,
+                    description: template.description,
+                    style: template.style,
+                    tags: template.tags,
+                    ownerUsername: template.owner.username,
+                    ownerAvatar: serializeAsset(request, template.owner.profile?.avatarFileId ? ownerFileById.get(template.owner.profile.avatarFileId) : null),
+                    importCount: template.importCount,
+                    likeCount: template.likeCount,
+                    preview: serializeAsset(request, template.previewFile),
+                    createdAt: template.createdAt
+                };
+            })
         };
     });
     app.get("/api/templates/mine", async (request) => {
@@ -76,16 +91,30 @@ export async function registerTemplateRoutes(app) {
         const template = await app.prisma.template.findUnique({
             where: { id: params.id },
             include: {
-                owner: { select: { username: true } },
+                owner: {
+                    select: {
+                        username: true,
+                        profile: {
+                            select: {
+                                avatarFileId: true,
+                                files: { where: { deletedAt: null, kind: "AVATAR" } }
+                            }
+                        }
+                    }
+                },
                 previewFile: true
             }
         });
         if (!template || !template.isPublished)
             fail(404, "TEMPLATE_NOT_FOUND", "Template was not found");
+        const ownerFiles = template.owner.profile?.files ?? [];
+        const ownerFileById = new Map(ownerFiles.map((file) => [file.id, file]));
+        const { owner: _owner, previewFile: _previewFile, ...templateFields } = template;
         return {
             template: {
-                ...template,
+                ...templateFields,
                 ownerUsername: template.owner.username,
+                ownerAvatar: serializeAsset(request, template.owner.profile?.avatarFileId ? ownerFileById.get(template.owner.profile.avatarFileId) : null),
                 preview: serializeAsset(request, template.previewFile)
             }
         };

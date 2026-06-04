@@ -140,6 +140,7 @@ export function assertCsrf(request: FastifyRequest): void {
   if (["GET", "HEAD", "OPTIONS"].includes(method)) return;
   if (!request.url.startsWith("/api/")) return;
   if (request.url.startsWith("/api/auth/login") || request.url.startsWith("/api/auth/register")) return;
+  if (/^\/api\/profiles\/[^/]+\/view(?:\?|$)/.test(request.url)) return;
 
   const session = request.currentSession;
   if (!session) return;

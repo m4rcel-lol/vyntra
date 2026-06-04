@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
+loadDotEnv();
 const envSchema = z.object({
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
     PORT: z.coerce.number().int().min(1).max(65535).default(3000),
@@ -19,4 +22,34 @@ export const isProduction = env.NODE_ENV === "production";
 export const allowedOrigins = env.FRONTEND_ORIGIN.split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
+function loadDotEnv() {
+    const candidates = [
+        process.env.VYNTRA_ENV_FILE,
+        path.resolve(process.cwd(), ".env"),
+        path.resolve(process.cwd(), "../../.env")
+    ].filter(Boolean);
+    for (const filePath of candidates) {
+        if (!existsSync(filePath))
+            continue;
+        const lines = readFileSync(filePath, "utf8").split(/\r?\n/);
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.startsWith("#"))
+                continue;
+            const match = /^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/.exec(trimmed);
+            if (!match)
+                continue;
+            const key = match[1];
+            const rawValue = match[2] ?? "";
+            if (!key)
+                continue;
+            if (process.env[key] !== undefined)
+                continue;
+            process.env[key] = rawValue
+                .replace(/^(['"])(.*)\1$/, "$2")
+                .replace(/\\n/g, "\n");
+        }
+        return;
+    }
+}
 //# sourceMappingURL=env.js.map

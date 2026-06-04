@@ -8,6 +8,7 @@ export type PublicAsset = {
     kind: string;
     originalName: string;
     sizeBytes: number;
+    metadata: Record<string, unknown>;
 };
 export declare function requestOrigin(request: FastifyRequest): string;
 export declare function assetUrl(request: FastifyRequest, publicId: string): string;

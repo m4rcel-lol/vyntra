@@ -8,18 +8,35 @@ import { fileTypeFromBuffer } from "file-type";
 import sharp from "sharp";
 import { env } from "../env.js";
 import { fail } from "./errors.js";
+const commonAudioMimes = [
+    "audio/mpeg",
+    "audio/mp3",
+    "audio/ogg",
+    "audio/wav",
+    "audio/vnd.wave",
+    "audio/x-wav",
+    "audio/webm",
+    "audio/mp4",
+    "audio/x-m4a",
+    "audio/aac",
+    "audio/flac",
+    "audio/x-flac",
+    "audio/aiff",
+    "audio/x-aiff"
+];
 const allowedMimeByKind = {
     AVATAR: ["image/jpeg", "image/png", "image/webp", "image/gif"],
     BANNER: ["image/jpeg", "image/png", "image/webp", "image/gif"],
     BACKGROUND_IMAGE: ["image/jpeg", "image/png", "image/webp", "image/gif"],
     BACKGROUND_VIDEO: ["video/mp4", "video/webm"],
-    AUDIO: ["audio/mpeg", "audio/ogg", "audio/wav", "audio/vnd.wave", "audio/webm"],
+    AUDIO: commonAudioMimes,
     CURSOR: ["image/png", "image/webp", "image/gif"],
     BADGE_ICON: ["image/jpeg", "image/png", "image/webp", "image/gif"],
     TEMPLATE_PREVIEW: ["image/jpeg", "image/png", "image/webp"],
     CUSTOM_ICON: ["image/jpeg", "image/png", "image/webp", "image/gif"],
     METADATA_IMAGE: ["image/jpeg", "image/png", "image/webp"],
-    OTHER: ["image/jpeg", "image/png", "image/webp", "image/gif", "video/mp4", "video/webm", "audio/mpeg", "audio/ogg", "audio/vnd.wave"]
+    MUSIC_COVER: ["image/jpeg", "image/png", "image/webp", "image/gif"],
+    OTHER: ["image/jpeg", "image/png", "image/webp", "image/gif", "video/mp4", "video/webm", ...commonAudioMimes]
 };
 const imageMaxPixelsByKind = {
     AVATAR: 512,
@@ -28,6 +45,7 @@ const imageMaxPixelsByKind = {
     CURSOR: 128,
     TEMPLATE_PREVIEW: 1280,
     METADATA_IMAGE: 1200,
+    MUSIC_COVER: 800,
     BANNER: 1920,
     BACKGROUND_IMAGE: 1920,
     OTHER: 1600
@@ -53,6 +71,9 @@ export async function detectUploadMime(buffer) {
 }
 export function assertAllowedMime(kind, mimeType) {
     const allowed = allowedMimeByKind[kind] ?? allowedMimeByKind.OTHER ?? [];
+    if ((kind === "AUDIO" || kind === "OTHER") && mimeType.startsWith("audio/")) {
+        return;
+    }
     if (!allowed.includes(mimeType)) {
         fail(400, "UNSUPPORTED_FILE_TYPE", `File type ${mimeType} is not allowed for ${kind}`);
     }
@@ -109,35 +130,42 @@ function resolveObjectPath(objectKey) {
     return resolved;
 }
 async function compressImage(params) {
-    const max = imageMaxPixelsByKind[params.kind] ?? imageMaxPixelsByKind.OTHER ?? 1600;
-    const animated = params.mimeType === "image/gif";
-    const pipeline = sharp(params.body, { animated, limitInputPixels: 12000 * 12000 })
-        .rotate()
-        .resize({
-        width: max,
-        height: max,
-        fit: "inside",
-        withoutEnlargement: true
-    })
-        .webp({
-        quality: animated ? 68 : 78,
-        effort: 5,
-        smartSubsample: true
-    });
-    let compressed = await pipeline.toBuffer();
-    if (compressed.length > params.body.length) {
-        compressed = await sharp(params.body, { animated, limitInputPixels: 12000 * 12000 })
+    try {
+        const max = imageMaxPixelsByKind[params.kind] ?? imageMaxPixelsByKind.OTHER ?? 1600;
+        const animated = params.mimeType === "image/gif";
+        const pipeline = sharp(params.body, { animated, limitInputPixels: 12000 * 12000 })
             .rotate()
-            .resize({ width: max, height: max, fit: "inside", withoutEnlargement: true })
-            .webp({ quality: animated ? 56 : 62, effort: 6, smartSubsample: true })
-            .toBuffer();
+            .resize({
+            width: max,
+            height: max,
+            fit: "inside",
+            withoutEnlargement: true
+        })
+            .webp({
+            quality: animated ? 68 : 78,
+            effort: 5,
+            smartSubsample: true
+        });
+        let compressed = await pipeline.toBuffer();
+        if (compressed.length > params.body.length) {
+            compressed = await sharp(params.body, { animated, limitInputPixels: 12000 * 12000 })
+                .rotate()
+                .resize({ width: max, height: max, fit: "inside", withoutEnlargement: true })
+                .webp({ quality: animated ? 56 : 62, effort: 6, smartSubsample: true })
+                .toBuffer();
+        }
+        return compressedResult({
+            body: compressed,
+            mimeType: "image/webp",
+            originalName: params.originalName,
+            extension: "webp"
+        });
     }
-    return compressedResult({
-        body: compressed,
-        mimeType: "image/webp",
-        originalName: params.originalName,
-        extension: "webp"
-    });
+    catch (error) {
+        fail(400, "IMAGE_COMPRESSION_FAILED", error instanceof Error
+            ? `Uploaded image could not be processed: ${error.message}`
+            : "Uploaded image could not be processed");
+    }
 }
 async function compressVideo(params) {
     const input = await writeTemp(params.body, extensionForMime(params.mimeType));
@@ -182,6 +210,8 @@ async function compressAudio(params) {
     const input = await writeTemp(params.body, extensionForMime(params.mimeType));
     const output = `${input}.compressed.mp3`;
     try {
+        const metadata = await readAudioMetadata(input, params.originalName);
+        const cover = await extractAudioCover(input, params.originalName);
         await runFfmpeg([
             "-y",
             "-i",
@@ -195,15 +225,79 @@ async function compressAudio(params) {
             "-1",
             output
         ]);
-        return compressedResult({
-            body: await readFile(output),
-            mimeType: "audio/mpeg",
-            originalName: params.originalName,
-            extension: "mp3"
-        });
+        return {
+            ...compressedResult({
+                body: await readFile(output),
+                mimeType: "audio/mpeg",
+                originalName: params.originalName,
+                extension: "mp3"
+            }),
+            metadata,
+            sidecars: cover ? [cover] : []
+        };
     }
     finally {
         await rm(path.dirname(input), { force: true, recursive: true });
+    }
+}
+async function readAudioMetadata(input, originalName) {
+    const probe = await runFfprobe(input).catch(() => null);
+    const format = asRecord(probe?.format);
+    const streams = Array.isArray(probe?.streams) ? probe.streams : [];
+    const tags = {
+        ...collectAudioStreamTags(streams),
+        ...normalizeTagObject(asRecord(format.tags))
+    };
+    const duration = Number(format.duration);
+    const title = cleanText(tagValue(tags, ["title", "track", "tracktitle"]) || titleFromFilename(originalName), 120);
+    const artist = cleanText(tagValue(tags, ["artist", "album_artist", "albumartist", "author", "composer", "performer"]), 120);
+    const album = cleanText(tagValue(tags, ["album"]), 120);
+    return removeEmpty({
+        title,
+        artist,
+        album,
+        durationSeconds: Number.isFinite(duration) && duration > 0 ? Math.round(duration) : undefined
+    });
+}
+async function extractAudioCover(input, originalName) {
+    const output = path.join(path.dirname(input), "cover.png");
+    const extracted = await tryRunFfmpeg([
+        "-y",
+        "-i",
+        input,
+        "-map",
+        "0:v:0",
+        "-frames:v",
+        "1",
+        "-update",
+        "1",
+        output
+    ]);
+    if (!extracted)
+        return null;
+    const rawCover = await readFile(output).catch(() => null);
+    if (!rawCover?.length)
+        return null;
+    try {
+        const body = await sharp(rawCover, { limitInputPixels: 12000 * 12000 })
+            .rotate()
+            .resize({ width: 800, height: 800, fit: "inside", withoutEnlargement: true })
+            .webp({ quality: 78, effort: 5, smartSubsample: true })
+            .toBuffer();
+        const result = compressedResult({
+            body,
+            mimeType: "image/webp",
+            originalName: `${titleFromFilename(originalName)}-cover.png`,
+            extension: "webp"
+        });
+        return {
+            kind: "MUSIC_COVER",
+            ...result,
+            metadata: { source: "audio-embedded-cover" }
+        };
+    }
+    catch {
+        return null;
     }
 }
 function compressedResult(params) {
@@ -251,6 +345,87 @@ async function runFfmpeg(args) {
         fail(500, "MEDIA_COMPRESSION_FAILED", error instanceof Error ? error.message : "Media compression failed");
     }
 }
+async function tryRunFfmpeg(args) {
+    return new Promise((resolve) => {
+        const child = spawn("ffmpeg", args, { stdio: ["ignore", "ignore", "ignore"] });
+        child.on("error", () => resolve(false));
+        child.on("close", (code) => resolve(code === 0));
+    });
+}
+async function runFfprobe(input) {
+    return new Promise((resolve, reject) => {
+        const child = spawn("ffprobe", [
+            "-v",
+            "error",
+            "-print_format",
+            "json",
+            "-show_format",
+            "-show_streams",
+            input
+        ], { stdio: ["ignore", "pipe", "pipe"] });
+        let stdout = "";
+        let stderr = "";
+        child.stdout.on("data", (chunk) => {
+            stdout += chunk.toString("utf8");
+            if (stdout.length > 500_000)
+                stdout = stdout.slice(-500_000);
+        });
+        child.stderr.on("data", (chunk) => {
+            stderr += chunk.toString("utf8");
+            if (stderr.length > 4000)
+                stderr = stderr.slice(-4000);
+        });
+        child.on("error", reject);
+        child.on("close", (code) => {
+            if (code !== 0) {
+                reject(new Error(stderr || `ffprobe exited with ${code}`));
+                return;
+            }
+            try {
+                resolve(JSON.parse(stdout || "{}"));
+            }
+            catch (error) {
+                reject(error);
+            }
+        });
+    });
+}
+function titleFromFilename(name) {
+    return safeFilename(path.basename(name)).replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim() || "Untitled track";
+}
+function cleanText(value, maxLength) {
+    if (typeof value !== "string")
+        return undefined;
+    const cleaned = value.replace(/\s+/g, " ").trim();
+    return cleaned ? cleaned.slice(0, maxLength) : undefined;
+}
+function tagValue(tags, keys) {
+    for (const key of keys) {
+        const value = tags[key.toLowerCase()];
+        if (typeof value === "string" && value.trim())
+            return value;
+    }
+    return undefined;
+}
+function normalizeTagObject(tags) {
+    return Object.fromEntries(Object.entries(tags).map(([key, value]) => [key.toLowerCase(), value]));
+}
+function collectAudioStreamTags(streams) {
+    const result = {};
+    for (const stream of streams) {
+        const record = asRecord(stream);
+        if (record.codec_type !== "audio")
+            continue;
+        Object.assign(result, normalizeTagObject(asRecord(record.tags)));
+    }
+    return result;
+}
+function removeEmpty(record) {
+    return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined && value !== ""));
+}
+function asRecord(value) {
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
 function extensionForMime(mimeType) {
     const map = {
         "image/jpeg": "jpg",
@@ -260,10 +435,19 @@ function extensionForMime(mimeType) {
         "video/mp4": "mp4",
         "video/webm": "webm",
         "audio/mpeg": "mp3",
+        "audio/mp3": "mp3",
         "audio/ogg": "ogg",
         "audio/wav": "wav",
         "audio/vnd.wave": "wav",
-        "audio/webm": "webm"
+        "audio/x-wav": "wav",
+        "audio/webm": "webm",
+        "audio/mp4": "m4a",
+        "audio/x-m4a": "m4a",
+        "audio/aac": "aac",
+        "audio/flac": "flac",
+        "audio/x-flac": "flac",
+        "audio/aiff": "aiff",
+        "audio/x-aiff": "aiff"
     };
     return map[mimeType] ?? "bin";
 }

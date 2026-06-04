@@ -16,8 +16,22 @@ export function serializeAsset(request, asset) {
         mimeType: asset.mimeType,
         kind: asset.kind,
         originalName: asset.originalName,
-        sizeBytes: asset.sizeBytes
+        sizeBytes: asset.sizeBytes,
+        metadata: serializeAssetMetadata(request, asset.metadata)
     };
+}
+function serializeAssetMetadata(request, metadata) {
+    if (!metadata || typeof metadata !== "object" || Array.isArray(metadata))
+        return {};
+    const result = { ...metadata };
+    if (result.cover && typeof result.cover === "object" && !Array.isArray(result.cover)) {
+        const cover = { ...result.cover };
+        if (typeof cover.publicId === "string") {
+            cover.url = assetUrl(request, cover.publicId);
+        }
+        result.cover = cover;
+    }
+    return result;
 }
 function firstHeader(value) {
     if (Array.isArray(value))

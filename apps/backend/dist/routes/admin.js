@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireRole } from "../lib/auth.js";
 import { hashPassword } from "../lib/crypto.js";
 import { fail } from "../lib/errors.js";
+import { serializeAsset } from "../lib/serialize.js";
 import { usernameSchema } from "../lib/username.js";
 import { passwordSchema } from "../lib/validators.js";
 const userPatchSchema = z.object({
@@ -41,10 +42,14 @@ const templateAdminPatchSchema = z.object({
     style: z.string().trim().min(1).max(40).optional(),
     tags: z.array(z.string().trim().min(1).max(24)).max(10).optional()
 });
+const resetViewsSchema = z.object({
+    mode: z.enum(["zero", "recalculate"]).default("zero")
+});
+const protectedBadgeSlugs = new Set(["owner"]);
 export async function registerAdminRoutes(app) {
     app.addHook("preHandler", async (request) => {
         if (request.url.startsWith("/api/admin")) {
-            requireRole(request, ["ADMIN", "MODERATOR"]);
+            requireRole(request, ["ADMIN"]);
         }
     });
     app.get("/api/admin/stats", async () => {
@@ -61,11 +66,81 @@ export async function registerAdminRoutes(app) {
     app.get("/api/admin/users", async (request) => {
         requireRole(request, ["ADMIN", "MODERATOR"]);
         const users = await app.prisma.user.findMany({
-            include: { profile: { select: { id: true, uid: true, displayName: true, viewCount: true } } },
+            include: {
+                profile: {
+                    select: {
+                        id: true,
+                        uid: true,
+                        displayName: true,
+                        viewCount: true,
+                        isPublic: true,
+                        avatarFileId: true,
+                        files: {
+                            where: { deletedAt: null, kind: "AVATAR" }
+                        },
+                        badges: {
+                            orderBy: { order: "asc" },
+                            include: {
+                                badge: {
+                                    select: {
+                                        id: true,
+                                        slug: true,
+                                        name: true,
+                                        color: true,
+                                        glowColor: true,
+                                        tooltip: true,
+                                        isGlobal: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
             orderBy: { createdAt: "desc" },
             take: 100
         });
-        return { users };
+        return {
+            users: users.map((user) => {
+                if (!user.profile)
+                    return user;
+                const fileById = new Map(user.profile.files.map((file) => [file.id, file]));
+                const { files: _files, ...profile } = user.profile;
+                return {
+                    ...user,
+                    profile: {
+                        ...profile,
+                        assets: {
+                            avatar: serializeAsset(request, profile.avatarFileId ? fileById.get(profile.avatarFileId) : null)
+                        }
+                    }
+                };
+            })
+        };
+    });
+    app.get("/api/admin/badges", async () => {
+        const badges = await app.prisma.badge.findMany({
+            include: {
+                _count: { select: { userBadges: true } }
+            },
+            orderBy: [{ isGlobal: "desc" }, { name: "asc" }]
+        });
+        return {
+            badges: badges.map((badge) => ({
+                id: badge.id,
+                slug: badge.slug,
+                name: badge.name,
+                description: badge.description,
+                tooltip: badge.tooltip,
+                color: badge.color,
+                glowColor: badge.glowColor,
+                iconFileId: badge.iconFileId,
+                isGlobal: badge.isGlobal,
+                assignmentCount: badge._count.userBadges,
+                createdAt: badge.createdAt,
+                updatedAt: badge.updatedAt
+            }))
+        };
     });
     app.patch("/api/admin/users/:id", async (request) => {
         const actor = requireRole(request, ["ADMIN"]);
@@ -87,6 +162,7 @@ export async function registerAdminRoutes(app) {
     app.post("/api/admin/badges", async (request) => {
         const actor = requireRole(request, ["ADMIN"]);
         const body = globalBadgeSchema.parse(request.body);
+        assertBadgeIsNotProtected(body.slug);
         const badge = await app.prisma.badge.upsert({
             where: { slug: body.slug },
             create: {
@@ -121,6 +197,7 @@ export async function registerAdminRoutes(app) {
         ]);
         if (!profile || !badge)
             fail(404, "NOT_FOUND", "Profile or badge was not found");
+        assertBadgeIsNotProtected(badge.slug);
         const userBadge = await app.prisma.userBadge.upsert({
             where: { profileId_badgeId: { profileId: profile.id, badgeId: badge.id } },
             create: { profileId: profile.id, badgeId: badge.id, assignedById: actor.id },
@@ -128,6 +205,25 @@ export async function registerAdminRoutes(app) {
         });
         await audit(app, actor.id, "badge.assign", "PROFILE", profile.id, body);
         return { userBadge };
+    });
+    app.delete("/api/admin/profiles/:profileId/badges/:badgeId", async (request) => {
+        const actor = requireRole(request, ["ADMIN", "MODERATOR"]);
+        const params = z.object({ profileId: z.string().cuid(), badgeId: z.string().cuid() }).parse(request.params);
+        const badge = await app.prisma.badge.findUnique({
+            where: { id: params.badgeId },
+            select: { slug: true }
+        });
+        if (!badge)
+            fail(404, "BADGE_NOT_FOUND", "Badge was not found");
+        assertBadgeIsNotProtected(badge.slug);
+        await app.prisma.userBadge.deleteMany({
+            where: {
+                profileId: params.profileId,
+                badgeId: params.badgeId
+            }
+        });
+        await audit(app, actor.id, "badge.remove", "PROFILE", params.profileId, { badgeId: params.badgeId });
+        return { ok: true };
     });
     app.get("/api/admin/reports", async () => {
         const reports = await app.prisma.report.findMany({
@@ -221,6 +317,46 @@ export async function registerAdminRoutes(app) {
         await audit(app, actor.id, "profile.remove", "PROFILE", profile.id, {});
         return { ok: true };
     });
+    app.post("/api/admin/profiles/:id/views/reset", async (request) => {
+        const actor = requireRole(request, ["ADMIN"]);
+        const params = z.object({ id: z.string().cuid() }).parse(request.params);
+        const body = resetViewsSchema.parse(request.body ?? {});
+        const profile = await app.prisma.profile.findUnique({
+            where: { id: params.id },
+            include: { user: { select: { username: true } } }
+        });
+        if (!profile)
+            fail(404, "PROFILE_NOT_FOUND", "Profile was not found");
+        if (body.mode === "recalculate") {
+            const uniqueViews = await app.prisma.profileView.count({ where: { profileId: profile.id } });
+            const updated = await app.prisma.profile.update({
+                where: { id: profile.id },
+                data: { viewCount: uniqueViews },
+                select: { id: true, viewCount: true }
+            });
+            await audit(app, actor.id, "profile.views.recalculate", "PROFILE", profile.id, { viewCount: uniqueViews });
+            app.io.to(`profile:${profile.user.username}`).emit("profile:view", {
+                username: profile.user.username,
+                viewCount: updated.viewCount
+            });
+            return { ok: true, profileId: updated.id, viewCount: updated.viewCount };
+        }
+        const [updated] = await app.prisma.$transaction([
+            app.prisma.profile.update({
+                where: { id: profile.id },
+                data: { viewCount: 0 },
+                select: { id: true, viewCount: true }
+            }),
+            app.prisma.profileView.deleteMany({ where: { profileId: profile.id } }),
+            app.prisma.analyticsEvent.deleteMany({ where: { profileId: profile.id, type: "PROFILE_VIEW" } })
+        ]);
+        await audit(app, actor.id, "profile.views.reset", "PROFILE", profile.id, {});
+        app.io.to(`profile:${profile.user.username}`).emit("profile:view", {
+            username: profile.user.username,
+            viewCount: updated.viewCount
+        });
+        return { ok: true, profileId: updated.id, viewCount: updated.viewCount };
+    });
     app.patch("/api/admin/templates/:id", async (request) => {
         const actor = requireRole(request, ["ADMIN", "MODERATOR"]);
         const params = z.object({ id: z.string().cuid() }).parse(request.params);
@@ -236,6 +372,11 @@ export async function registerAdminRoutes(app) {
         await audit(app, actor.id, "template.manage", "TEMPLATE", template.id, body);
         return { template };
     });
+}
+function assertBadgeIsNotProtected(slug) {
+    if (protectedBadgeSlugs.has(slug.toLowerCase())) {
+        fail(403, "BADGE_PROTECTED", "The Owner badge is managed by the system and cannot be changed from the admin panel");
+    }
 }
 async function audit(app, actorUserId, action, targetType, targetId, metadata) {
     await app.prisma.adminAuditLog.create({

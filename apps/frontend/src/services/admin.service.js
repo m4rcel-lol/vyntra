@@ -9,6 +9,7 @@ export const adminService = {
   upsertBadge: (payload) => adminApi.upsertBadge(payload),
   assignBadge: (profileId, badgeId) => adminApi.assignBadge(profileId, badgeId),
   removeBadge: (profileId, badgeId) => adminApi.removeBadge(profileId, badgeId),
+  resetProfileViews: (profileId, mode) => adminApi.resetProfileViews(profileId, mode),
   async getModerationQueue() {
     return { profiles: [], templates: [] };
   },

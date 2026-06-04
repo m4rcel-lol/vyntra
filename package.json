@@ -8,7 +8,9 @@
     "apps/frontend"
   ],
   "scripts": {
-    "dev": "npm run dev --workspaces",
+    "dev": "npm run dev:services && npm run dev --workspaces",
+    "dev:services": "bash scripts/dev-services.sh",
+    "dev:stop": "bash scripts/dev-services-stop.sh",
     "build": "npm run build --workspaces",
     "typecheck": "npm run typecheck --workspaces",
     "seed": "npm run seed -w @vyntra/backend",

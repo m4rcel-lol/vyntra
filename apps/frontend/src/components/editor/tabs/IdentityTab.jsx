@@ -11,15 +11,19 @@ export const IdentityTab = () => {
   const setNested = useProfileStore((s) => s.setNested);
   const applyMusicUpload = (value, asset) => {
     const hasMusic = Boolean(value);
+    const metadata = asset?.metadata ?? {};
+    const cover = metadata.cover ?? {};
+    const title = cleanTrackTitle(metadata.title || titleFromAsset(asset));
+    const artist = cleanTrackTitle(metadata.artist || profile.music?.artist || profile.displayName || profile.username);
     setNested('music', 'src', value);
     setNested('music', 'enabled', hasMusic);
     setNested('assetIds', 'audioFileId', asset?.id ?? null);
-
-    if (hasMusic && asset?.originalName && !profile.music?.title) {
-      setNested('music', 'title', asset.originalName.replace(/\.[^/.]+$/, ''));
-    }
-    if (hasMusic && !profile.music?.artist) {
-      setNested('music', 'artist', profile.displayName || profile.username);
+    setNested('music', 'title', hasMusic ? title : '');
+    setNested('music', 'artist', hasMusic ? artist : '');
+    if (cover.url || cover.fileId) {
+      setNested('music', 'cover', cover.url || '');
+      setNested('music', 'coverFileId', cover.fileId ?? null);
+      setNested('assetIds', 'musicCoverFileId', cover.fileId ?? null);
     }
   };
 
@@ -61,3 +65,11 @@ export const IdentityTab = () => {
     </EditorSection>
   );
 };
+
+function titleFromAsset(asset) {
+  return cleanTrackTitle(String(asset?.originalName || '').replace(/\.[^/.]+$/, ''));
+}
+
+function cleanTrackTitle(value) {
+  return String(value || '').replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+}

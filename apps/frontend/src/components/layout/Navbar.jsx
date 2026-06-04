@@ -12,6 +12,7 @@ const NAV = [
   { label: 'Features', href: '#features' },
   { label: 'Templates', href: '#templates' },
   { label: 'Showcase', href: '#showcase' },
+  { label: 'Perks', to: '/perks' },
   { label: 'Pricing', href: '#pricing' },
 ];
 
@@ -46,13 +47,23 @@ export const Navbar = () => {
 
         <div className="hidden items-center gap-1 md:flex">
           {NAV.map((item) => (
-            <a
-              key={item.label}
-              href={item.href}
-              className="rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {item.label}
-            </a>
+            item.to ? (
+              <Link
+                key={item.label}
+                to={item.to}
+                className="rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {item.label}
+              </Link>
+            ) : (
+              <a
+                key={item.label}
+                href={item.href}
+                className="rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {item.label}
+              </a>
+            )
           ))}
         </div>
 
@@ -87,9 +98,15 @@ export const Navbar = () => {
               <Logo className="mb-6" />
               {NAV.map((item) => (
                 <SheetClose asChild key={item.label}>
-                  <a href={item.href} className="rounded-lg px-3 py-3 text-base text-foreground/90 hover:bg-secondary/60">
-                    {item.label}
-                  </a>
+                  {item.to ? (
+                    <Link to={item.to} className="rounded-lg px-3 py-3 text-base text-foreground/90 hover:bg-secondary/60">
+                      {item.label}
+                    </Link>
+                  ) : (
+                    <a href={item.href} className="rounded-lg px-3 py-3 text-base text-foreground/90 hover:bg-secondary/60">
+                      {item.label}
+                    </a>
+                  )}
                 </SheetClose>
               ))}
               <div className="mt-6 flex flex-col gap-2">

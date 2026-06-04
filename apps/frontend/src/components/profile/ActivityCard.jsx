@@ -1,27 +1,26 @@
-import { Disc, Headphones } from 'lucide-react';
+import { Disc, Headphones, Music2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const STATUS = {
-  online: { color: '142 70% 45%', label: 'Online' },
-  idle: { color: '38 92% 55%', label: 'Idle' },
-  dnd: { color: '0 80% 60%', label: 'Do Not Disturb' },
-  offline: { color: '0 0% 45%', label: 'Offline' },
+  online: 'Online',
+  idle: 'Idle',
+  dnd: 'Do Not Disturb',
+  offline: 'Offline',
 };
 
 export const DiscordCard = ({ activity, className }) => {
   if (!activity) return null;
-  const st = STATUS[activity.status] || STATUS.offline;
+  const status = STATUS[activity.status] || STATUS.offline;
   return (
     <div className={cn('flex items-center gap-3 rounded-2xl glass border-gradient p-3', className)}>
       <div className="relative shrink-0">
         <img src={activity.avatar} alt="" className="h-11 w-11 rounded-xl object-cover" />
-        <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-card" style={{ background: `hsl(${st.color})` }} />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 text-sm font-medium">
           <Disc className="h-3.5 w-3.5 text-muted-foreground" /> @{activity.username}
         </div>
-        <p className="truncate text-xs text-muted-foreground">{activity.activity}</p>
+        <p className="truncate text-xs text-muted-foreground">{status} · {activity.activity}</p>
       </div>
     </div>
   );
@@ -32,7 +31,13 @@ export const SpotifyCard = ({ activity, accent = '142 70% 45%', className }) => 
   return (
     <div className={cn('flex items-center gap-3 rounded-2xl glass border-gradient p-3', className)}>
       <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl">
-        <img src={activity.cover} alt="" className="h-full w-full object-cover" />
+        {activity.cover ? (
+          <img src={activity.cover} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-secondary text-muted-foreground">
+            <Music2 className="h-5 w-5" />
+          </div>
+        )}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">

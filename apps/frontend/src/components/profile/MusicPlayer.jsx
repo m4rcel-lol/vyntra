@@ -42,7 +42,7 @@ export const MusicPlayer = ({ music, accent = '0 0% 100%', autoStart = false, cl
   if (!music?.enabled || !music?.src) return null;
 
   return (
-    <div className={cn('flex w-[22rem] max-w-[calc(100vw-2rem)] items-center gap-3 rounded-2xl glass-strong border-gradient p-3 shadow-soft sm:w-[24rem]', className)}>
+    <div className={cn('flex w-[calc(100vw-1rem)] max-w-sm items-center gap-2 rounded-2xl glass-strong border-gradient p-2.5 shadow-soft sm:w-96 sm:gap-3 sm:p-3', className)}>
       <audio
         ref={audioRef}
         src={music.src}
@@ -68,18 +68,18 @@ export const MusicPlayer = ({ music, accent = '0 0% 100%', autoStart = false, cl
           event.currentTarget.play().catch(() => setPlaying(false));
         }}
       />
-      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl">
+      <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl sm:h-14 sm:w-14">
         {music.cover ? <img src={music.cover} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center bg-secondary"><Music2 className="h-5 w-5" /></div>}
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{music.title || 'Untitled track'}</p>
         <p className="truncate text-xs text-muted-foreground">{music.artist || 'Unknown artist'}</p>
         <div className="mt-1.5 flex items-center gap-2">
-          <span className="w-8 text-[10px] tabular-nums text-muted-foreground">{fmt((progress / 100) * duration)}</span>
+          <span className="w-7 text-[10px] tabular-nums text-muted-foreground sm:w-8">{fmt((progress / 100) * duration)}</span>
           <div className="h-1 flex-1 overflow-hidden rounded-full bg-secondary">
             <div className="h-full rounded-full" style={{ width: `${progress}%`, background: `hsl(${accent})` }} />
           </div>
-          <span className="w-8 text-right text-[10px] tabular-nums text-muted-foreground">{fmt(duration)}</span>
+          <span className="w-7 text-right text-[10px] tabular-nums text-muted-foreground sm:w-8">{fmt(duration)}</span>
         </div>
       </div>
       <div className="flex flex-col items-center gap-1">
@@ -87,7 +87,7 @@ export const MusicPlayer = ({ music, accent = '0 0% 100%', autoStart = false, cl
           <button
             onClick={() => setLooping((value) => !value)}
             className={cn(
-              'flex h-9 w-9 items-center justify-center rounded-full border border-border transition-colors',
+              'flex h-8 w-8 items-center justify-center rounded-full border border-border transition-colors sm:h-9 sm:w-9',
               looping ? 'bg-primary text-primary-foreground' : 'bg-secondary/60 text-muted-foreground hover:text-foreground'
             )}
             aria-label={looping ? 'Disable loop' : 'Enable loop'}
@@ -98,7 +98,7 @@ export const MusicPlayer = ({ music, accent = '0 0% 100%', autoStart = false, cl
           </button>
           <button
             onClick={() => setPlaying((p) => !p)}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform hover:scale-105"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform hover:scale-105 sm:h-9 sm:w-9"
             aria-label={playing ? 'Pause' : 'Play'}
             data-testid="music-toggle"
           >
@@ -110,7 +110,7 @@ export const MusicPlayer = ({ music, accent = '0 0% 100%', autoStart = false, cl
           <input
             type="range" min={0} max={100} value={volume}
             onChange={(e) => setVolume(Number(e.target.value))}
-            className="h-1 w-16 cursor-pointer appearance-none rounded-full bg-secondary accent-white"
+            className="h-1 w-12 cursor-pointer appearance-none rounded-full bg-secondary accent-white sm:w-16"
             aria-label="Volume"
           />
         </div>

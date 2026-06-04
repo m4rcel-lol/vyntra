@@ -1,1 +1,0 @@
-import{a as e}from"./index-B5ZiphNK.js";var t={getAnalytics:(t=`30d`)=>e.summary(t)};export{t};

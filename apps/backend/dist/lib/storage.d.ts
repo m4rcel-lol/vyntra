@@ -5,6 +5,17 @@ type CompressedUpload = {
     safeName: string;
     extension: string;
     checksum: string;
+    metadata?: Record<string, unknown>;
+    sidecars?: CompressedSidecar[];
+};
+export type CompressedSidecar = {
+    kind: "MUSIC_COVER";
+    body: Buffer;
+    mimeType: string;
+    safeName: string;
+    extension: string;
+    checksum: string;
+    metadata?: Record<string, unknown>;
 };
 export declare function ensureStorageDir(): Promise<void>;
 export declare function safeFilename(name: string): string;

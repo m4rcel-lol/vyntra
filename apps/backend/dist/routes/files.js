@@ -36,26 +36,56 @@ export async function registerFileRoutes(app) {
         });
         assertCompressedSize(compressed.body.byteLength);
         const objectKey = `users/${user.id}/${query.kind.toLowerCase()}/${Date.now()}-${nanoid(12)}-${compressed.safeName}`;
+        const writtenObjectKeys = [objectKey];
         await writeObject({ objectKey, body: compressed.body });
         try {
-            const asset = await app.prisma.fileAsset.create({
-                data: {
-                    ownerUserId: user.id,
-                    profileId: user.profileId,
-                    kind: query.kind,
-                    storageDriver: "local",
-                    objectKey,
-                    originalName: file.filename.slice(0, 200),
-                    safeName: compressed.safeName,
-                    mimeType: compressed.mimeType,
-                    sizeBytes: compressed.body.byteLength,
-                    checksum: compressed.checksum
+            const sidecars = [];
+            for (const sidecar of compressed.sidecars ?? []) {
+                const sidecarObjectKey = `users/${user.id}/${sidecar.kind.toLowerCase()}/${Date.now()}-${nanoid(12)}-${sidecar.safeName}`;
+                await writeObject({ objectKey: sidecarObjectKey, body: sidecar.body });
+                writtenObjectKeys.push(sidecarObjectKey);
+                sidecars.push({ ...sidecar, objectKey: sidecarObjectKey });
+            }
+            const asset = await app.prisma.$transaction(async (tx) => {
+                const sidecarAssets = [];
+                for (const sidecar of sidecars) {
+                    sidecarAssets.push(await tx.fileAsset.create({
+                        data: {
+                            ownerUserId: user.id,
+                            profileId: user.profileId,
+                            kind: sidecar.kind,
+                            storageDriver: "local",
+                            objectKey: sidecar.objectKey,
+                            originalName: sidecar.safeName.slice(0, 200),
+                            safeName: sidecar.safeName,
+                            mimeType: sidecar.mimeType,
+                            sizeBytes: sidecar.body.byteLength,
+                            checksum: sidecar.checksum,
+                            metadata: (sidecar.metadata ?? {})
+                        }
+                    }));
                 }
+                const coverAsset = sidecarAssets.find((asset) => asset.kind === "MUSIC_COVER") ?? null;
+                return tx.fileAsset.create({
+                    data: {
+                        ownerUserId: user.id,
+                        profileId: user.profileId,
+                        kind: query.kind,
+                        storageDriver: "local",
+                        objectKey,
+                        originalName: file.filename.slice(0, 200),
+                        safeName: compressed.safeName,
+                        mimeType: compressed.mimeType,
+                        sizeBytes: compressed.body.byteLength,
+                        checksum: compressed.checksum,
+                        metadata: buildUploadMetadata(compressed.metadata, coverAsset)
+                    }
+                });
             });
             return { file: serializeAsset(request, asset) };
         }
         catch (error) {
-            await deleteObject(objectKey);
+            await Promise.all(writtenObjectKeys.map((key) => deleteObject(key)));
             throw error;
         }
     });
@@ -116,5 +146,22 @@ export async function registerFileRoutes(app) {
             reply.header("Content-Length", object.contentLength);
         return reply.send(object.body);
     });
+}
+function buildUploadMetadata(metadata, coverAsset) {
+    return removeEmpty({
+        ...(metadata ?? {}),
+        cover: coverAsset
+            ? {
+                fileId: coverAsset.id,
+                publicId: coverAsset.publicId,
+                mimeType: coverAsset.mimeType,
+                originalName: coverAsset.originalName,
+                sizeBytes: coverAsset.sizeBytes
+            }
+            : undefined
+    });
+}
+function removeEmpty(record) {
+    return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined && value !== ""));
 }
 //# sourceMappingURL=files.js.map

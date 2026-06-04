@@ -6,6 +6,7 @@ const kindFromLabel = (label = '') => {
   if (value.includes('banner')) return 'BANNER';
   if (value.includes('background')) return 'BACKGROUND_IMAGE';
   if (value.includes('video')) return 'BACKGROUND_VIDEO';
+  if (value.includes('cover') || value.includes('album art')) return 'MUSIC_COVER';
   if (value.includes('audio') || value.includes('music')) return 'AUDIO';
   if (value.includes('cursor')) return 'CURSOR';
   if (value.includes('badge')) return 'BADGE_ICON';

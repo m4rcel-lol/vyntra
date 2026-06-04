@@ -4,6 +4,8 @@ const prisma = new PrismaClient();
 const adminUsername = process.env.SEED_ADMIN_USERNAME ?? "owner";
 const adminEmail = process.env.SEED_ADMIN_EMAIL ?? "owner@example.com";
 const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? "ChangeMeNow123!";
+const ownerBio = "Self-hosted creator identity, without locked feature tiers.";
+const protectedOwnerUsernames = Array.from(new Set([adminUsername, "owner", "m5rcel"].map((name) => name.toLowerCase())));
 const globalBadges = [
     ["owner", "Owner", "#facc15", "#facc15", "Platform owner"],
     ["staff", "Staff", "#38bdf8", "#38bdf8", "Vyntra.bio staff"],
@@ -30,6 +32,7 @@ const reserved = [
     "health",
     "login",
     "logout",
+    "perks",
     "register",
     "settings",
     "templates",
@@ -50,7 +53,7 @@ async function main() {
             profile: {
                 create: {
                     displayName: "Vyntra Owner",
-                    bio: "Self-hosted creator identity, without locked premium tiers.",
+                    bio: ownerBio,
                     location: "Vyntra.bio",
                     layout: "centered-glass",
                     theme: {
@@ -95,6 +98,70 @@ async function main() {
         },
         include: { profile: true }
     });
+    if (admin.profile) {
+        await prisma.profile.update({
+            where: { id: admin.profile.id },
+            data: {
+                displayName: "Vyntra Owner",
+                bio: ownerBio,
+                location: "Vyntra.bio",
+                statusText: "Creating something memorable"
+            }
+        });
+        const starterSnapshot = {
+            layout: "centered-glass",
+            statusText: "Creating something memorable",
+            theme: {
+                accentColor: "#d8d8d8",
+                textColor: "#ffffff",
+                cardOpacity: 0.72,
+                cardBlur: 24,
+                borderGlow: true
+            },
+            effects: {
+                particles: "stars",
+                entranceAnimation: "scale",
+                hoverAnimation: "lift",
+                backgroundAnimation: "gradient"
+            },
+            metadata: {
+                title: "Monochrome Starter",
+                description: "A clean dark Vyntra.bio profile template"
+            },
+            embeds: [],
+            customCss: "",
+            clickToEnter: true,
+            links: [
+                { title: "Vyntra.bio", url: "https://example.com", kind: "website", order: 0, isVisible: true, style: {} },
+                { title: "GitHub", url: "https://github.com", kind: "github", order: 1, isVisible: true, style: {} }
+            ],
+            badges: [
+                { name: "Owner", color: "#facc15", glowColor: "#facc15", tooltip: "Platform owner" },
+                { name: "Unlimited", color: "#d4d4d4", glowColor: "#ffffff", tooltip: "All features unlocked for free" }
+            ]
+        };
+        const existingTemplate = await prisma.template.findFirst({
+            where: { ownerUserId: admin.id, name: "Monochrome Starter" }
+        });
+        const starterTemplateData = {
+            ownerUserId: admin.id,
+            name: "Monochrome Starter",
+            description: "A polished black, white, and glass profile starter for self-hosted creators.",
+            style: "dark",
+            tags: ["dark", "clean", "portfolio"],
+            isPublished: true,
+            snapshot: starterSnapshot
+        };
+        if (existingTemplate) {
+            await prisma.template.update({
+                where: { id: existingTemplate.id },
+                data: starterTemplateData
+            });
+        }
+        else {
+            await prisma.template.create({ data: starterTemplateData });
+        }
+    }
     for (const [slug, name, color, glowColor, tooltip] of globalBadges) {
         await prisma.badge.upsert({
             where: { slug },
@@ -134,10 +201,29 @@ async function main() {
     }
     const ownerBadge = await prisma.badge.findUnique({ where: { slug: "owner" } });
     const unlimitedBadge = await prisma.badge.findUnique({ where: { slug: "unlimited" } });
-    if (admin.profile && ownerBadge && unlimitedBadge) {
+    if (ownerBadge) {
+        const protectedOwners = await prisma.user.findMany({
+            where: { username: { in: protectedOwnerUsernames } },
+            include: { profile: true }
+        });
+        const ownerAssignments = protectedOwners
+            .filter((user) => user.profile)
+            .map((user) => ({
+            profileId: user.profile.id,
+            badgeId: ownerBadge.id,
+            assignedById: admin.id,
+            order: 0
+        }));
+        if (ownerAssignments.length > 0) {
+            await prisma.userBadge.createMany({
+                data: ownerAssignments,
+                skipDuplicates: true
+            });
+        }
+    }
+    if (admin.profile && unlimitedBadge) {
         await prisma.userBadge.createMany({
             data: [
-                { profileId: admin.profile.id, badgeId: ownerBadge.id, assignedById: admin.id, order: 0 },
                 { profileId: admin.profile.id, badgeId: unlimitedBadge.id, assignedById: admin.id, order: 1 }
             ],
             skipDuplicates: true

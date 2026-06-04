@@ -1,5 +1,6 @@
 import { requireUser } from "../lib/auth.js";
 import { fail } from "../lib/errors.js";
+import { serializeAsset } from "../lib/serialize.js";
 export async function registerDashboardRoutes(app) {
     app.get("/api/dashboard", async (request) => {
         const user = requireUser(request);
@@ -10,7 +11,8 @@ export async function registerDashboardRoutes(app) {
                 where: { id: user.profileId },
                 include: {
                     links: { orderBy: { order: "asc" } },
-                    badges: { include: { badge: true }, orderBy: { order: "asc" } }
+                    badges: { include: { badge: true }, orderBy: { order: "asc" } },
+                    files: { where: { deletedAt: null } }
                 }
             }),
             app.prisma.profileView.findMany({
@@ -38,9 +40,25 @@ export async function registerDashboardRoutes(app) {
         ]);
         if (!profile)
             fail(404, "PROFILE_NOT_FOUND", "Profile was not found");
+        const fileById = new Map(profile.files.map((file) => [file.id, file]));
+        const musicActivity = asRecord(profile.musicActivity);
+        const musicCoverFileId = typeof musicActivity.coverFileId === "string" ? musicActivity.coverFileId : "";
+        const { files: _files, ...profileFields } = profile;
+        const profileWithAssets = {
+            ...profileFields,
+            assets: {
+                avatar: serializeAsset(request, profile.avatarFileId ? fileById.get(profile.avatarFileId) : null),
+                banner: serializeAsset(request, profile.bannerFileId ? fileById.get(profile.bannerFileId) : null),
+                background: serializeAsset(request, profile.backgroundFileId ? fileById.get(profile.backgroundFileId) : null),
+                audio: serializeAsset(request, profile.audioFileId ? fileById.get(profile.audioFileId) : null),
+                musicCover: serializeAsset(request, musicCoverFileId ? fileById.get(musicCoverFileId) : null),
+                cursor: serializeAsset(request, profile.cursorFileId ? fileById.get(profile.cursorFileId) : null),
+                metadata: serializeAsset(request, profile.metadataFileId ? fileById.get(profile.metadataFileId) : null)
+            }
+        };
         return {
             user,
-            profile,
+            profile: profileWithAssets,
             stats: {
                 views: profile.viewCount,
                 links: profile.links.length,
@@ -60,5 +78,8 @@ export async function registerDashboardRoutes(app) {
             announcements
         };
     });
+}
+function asRecord(value) {
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 //# sourceMappingURL=dashboard.js.map

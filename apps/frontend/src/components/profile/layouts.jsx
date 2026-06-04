@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Terminal as TerminalIcon, ArrowUpRight } from 'lucide-react';
-import { ProfileAvatar, ProfileIdentity, ProfileMeta, ProfileEmbeds } from './ProfileParts';
+import { ProfileAvatar, ProfileIdentity, ProfileMeta, ProfileEmbeds, ProfileUsername } from './ProfileParts';
 import { BadgeRow } from './BadgeRow';
 import { SocialLinks } from './SocialLinks';
 import { DiscordCard, SpotifyCard } from './ActivityCard';
@@ -75,7 +75,7 @@ export const MinimalLayout = ({ profile }) => (
   <Reveal className="flex w-full max-w-sm flex-col items-center text-center">
     <ProfileAvatar profile={profile} size={84} />
     <h1 className="mt-5 font-display text-3xl font-semibold tracking-tight">{profile.displayName}</h1>
-    <p className="text-sm text-muted-foreground">@{profile.username}</p>
+    <ProfileUsername profile={profile} />
     {profile.bio && <p className="mt-3 max-w-xs text-sm text-foreground/75">{profile.bio}</p>}
     <BadgeRow badges={profile.badges} className="mt-4" size="sm" />
     <SocialLinks links={profile.links} accent={profile.accent} variant="icons" className="mt-6" />
@@ -138,7 +138,12 @@ export const TerminalLayout = ({ profile }) => {
         </div>
         <div className="space-y-2 p-5 leading-relaxed">
           <p><span style={{ color: accent }}>vyntra@user</span>:<span className="text-muted-foreground">~</span>$ whoami</p>
-          <p className="text-foreground">{profile.displayName} <span className="text-muted-foreground">(@{profile.username})</span></p>
+          <p className="flex flex-wrap items-center gap-1.5 text-foreground">
+            <span>{profile.displayName}</span>
+            <span className="text-muted-foreground">(</span>
+            <ProfileUsername profile={profile} align="left" as="span" className="font-mono" />
+            <span className="text-muted-foreground">)</span>
+          </p>
           <p className="pt-2"><span style={{ color: accent }}>vyntra@user</span>:<span className="text-muted-foreground">~</span>$ cat bio.txt</p>
           <p className="text-foreground/80">{profile.bio}</p>
           <p className="pt-2"><span style={{ color: accent }}>vyntra@user</span>:<span className="text-muted-foreground">~</span>$ cat status</p>
@@ -198,6 +203,100 @@ export const PortfolioLayout = ({ profile }) => (
   </Reveal>
 );
 
+/* ---------- Spotlight ---------- */
+export const SpotlightLayout = ({ profile }) => (
+  <Reveal className="w-full max-w-5xl">
+    <div className={cn(card, 'grid overflow-hidden lg:grid-cols-[1.05fr_0.95fr]')} style={glow(profile)}>
+      <div className="relative min-h-[420px] p-7 sm:p-9">
+        <img src={profile.banner} alt="" className="absolute inset-0 h-full w-full object-cover opacity-35" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.16),transparent_34%),linear-gradient(135deg,rgba(0,0,0,0.2),rgba(0,0,0,0.88))]" />
+        <div className="relative z-10 flex h-full flex-col justify-between gap-10">
+          <div>
+            <ProfileAvatar profile={profile} size={112} />
+            <BadgeRow badges={profile.badges} className="mt-4 justify-start" />
+          </div>
+          <div>
+            <ProfileIdentity profile={profile} align="left" />
+            <ProfileMeta profile={profile} align="left" className="mt-5" />
+          </div>
+        </div>
+      </div>
+      <div className="flex flex-col justify-center gap-4 border-t border-border p-7 sm:p-9 lg:border-l lg:border-t-0">
+        <div className="rounded-2xl border border-border bg-secondary/20 p-4">
+          <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Featured links</p>
+          <SocialLinks links={profile.links.slice(0, 5)} accent={profile.accent} className="mt-4" />
+        </div>
+        {hasActivityCards(profile) && (
+          <div className="space-y-3">
+            {profile.embeds?.discordActivity && <DiscordCard activity={profile.discordActivity} />}
+            {hasProfileMusic(profile) && <SpotifyCard activity={profile.spotifyActivity} accent={profile.accent} />}
+          </div>
+        )}
+        <ProfileEmbeds profile={profile} />
+      </div>
+    </div>
+  </Reveal>
+);
+
+/* ---------- Stacked Links ---------- */
+export const StackedLinksLayout = ({ profile }) => (
+  <Reveal className="w-full max-w-lg">
+    <div className={cn(card, 'overflow-hidden')} style={glow(profile)}>
+      <div className="relative h-44">
+        <img src={profile.banner} alt="" className="h-full w-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-t from-card via-card/45 to-transparent" />
+      </div>
+      <div className="relative px-6 pb-6">
+        <div className="-mt-16 flex flex-col items-center text-center">
+          <ProfileAvatar profile={profile} size={112} />
+          <BadgeRow badges={profile.badges} className="mt-4" />
+          <ProfileIdentity profile={profile} className="mt-3" />
+        </div>
+        <ProfileMeta profile={profile} className="mt-5" />
+        <div className="mt-5 space-y-2.5">
+          <SocialLinks links={profile.links} accent={profile.accent} />
+        </div>
+        <ProfileEmbeds profile={profile} className="mt-4" />
+      </div>
+    </div>
+  </Reveal>
+);
+
+/* ---------- Editorial ---------- */
+export const EditorialLayout = ({ profile }) => (
+  <Reveal className="w-full max-w-5xl">
+    <div className={cn(card, 'grid gap-0 overflow-hidden md:grid-cols-[0.85fr_1.15fr]')} style={glow(profile)}>
+      <aside className="border-b border-border p-7 md:border-b-0 md:border-r">
+        <p className="mb-5 text-xs uppercase tracking-[0.3em] text-muted-foreground">Profile</p>
+        <ProfileAvatar profile={profile} size={96} />
+        <ProfileIdentity profile={profile} align="left" className="mt-5" />
+        <BadgeRow badges={profile.badges} className="mt-5 justify-start" />
+        <ProfileMeta profile={profile} align="left" className="mt-6" />
+      </aside>
+      <section className="p-7">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="rounded-2xl border border-border bg-secondary/20 p-4">
+            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">About</p>
+            <p className="mt-3 text-sm leading-relaxed text-foreground/80">{profile.bio || profile.status || 'No bio yet.'}</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-secondary/20 p-4">
+            <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Status</p>
+            <p className="mt-3 text-sm leading-relaxed text-foreground/80">{profile.status || 'Building on Vyntra.bio'}</p>
+          </div>
+        </div>
+        <SocialLinks links={profile.links} accent={profile.accent} className="mt-5" />
+        {hasActivityCards(profile) && (
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            {profile.embeds?.discordActivity && <DiscordCard activity={profile.discordActivity} />}
+            {hasProfileMusic(profile) && <SpotifyCard activity={profile.spotifyActivity} accent={profile.accent} />}
+          </div>
+        )}
+        <ProfileEmbeds profile={profile} className="mt-5" />
+      </section>
+    </div>
+  </Reveal>
+);
+
 export const LAYOUTS = {
   centered: CenteredLayout,
   wide: WideLayout,
@@ -206,4 +305,7 @@ export const LAYOUTS = {
   floating: FloatingLayout,
   terminal: TerminalLayout,
   portfolio: PortfolioLayout,
+  spotlight: SpotlightLayout,
+  stacked: StackedLinksLayout,
+  editorial: EditorialLayout,
 };

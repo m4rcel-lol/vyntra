@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { isProduction } from "../env.js";
 import { requireUser } from "../lib/auth.js";
@@ -22,7 +23,10 @@ const profileUpdateSchema = z.object({
         "split-sidebar",
         "floating-card",
         "terminal",
-        "portfolio-grid"
+        "portfolio-grid",
+        "spotlight",
+        "stacked-links",
+        "editorial"
     ])
         .optional(),
     statusText: z.string().max(120).optional(),
@@ -85,6 +89,7 @@ export async function registerProfileRoutes(app) {
         const user = requireUser(request);
         const body = profileUpdateSchema.parse(request.body);
         await validateProfileFiles(app, user.id, body);
+        await validateMusicCoverFile(app, user.id, body.musicActivity);
         if (body.aliasSlug) {
             if (isRouteReserved(body.aliasSlug)) {
                 fail(400, "ALIAS_RESERVED", "That alias is reserved");
@@ -168,17 +173,26 @@ export async function registerProfileRoutes(app) {
         const username = params.username.toLowerCase();
         const profile = await app.prisma.profile.findFirst({
             where: { isPublic: true, OR: [{ user: { username } }, { aliasSlug: username }] },
-            include: { user: { select: { isBanned: true, username: true } } }
+            include: { user: { select: { id: true, isBanned: true, username: true } } }
         });
         if (!profile || profile.user.isBanned)
             fail(404, "PROFILE_NOT_FOUND", "Profile was not found");
+        if (request.currentUser?.isBanned) {
+            return { ok: true, skipped: true, reason: "banned-viewer", viewCount: profile.viewCount };
+        }
+        if (request.currentUser && (request.currentUser.id === profile.userId || request.currentUser.profileId === profile.id)) {
+            return { ok: true, skipped: true, reason: "owner", viewCount: profile.viewCount };
+        }
         const visitorCookie = request.cookies.vyntra_visitor;
         const visitorToken = visitorCookie ?? cryptoRandomVisitor();
-        const visitorHash = hashVisitor(`${visitorToken}:${request.headers["user-agent"] ?? ""}`);
+        const ipHash = hashIp(getClientIp(request));
+        const userAgent = request.headers["user-agent"] ?? "";
+        const visitorHash = request.currentUser
+            ? hashVisitor(`user:${request.currentUser.id}`)
+            : hashVisitor(`anonymous:${ipHash}:${userAgent}`);
         const { browser, device } = parseUserAgent(request);
         const country = getCountryFromHeaders(request);
         const referrer = getReferrer(request);
-        const ipHash = hashIp(getClientIp(request));
         if (!visitorCookie) {
             reply.setCookie("vyntra_visitor", visitorToken, {
                 httpOnly: true,
@@ -188,58 +202,78 @@ export async function registerProfileRoutes(app) {
                 maxAge: 60 * 60 * 24 * 365
             });
         }
-        const dedupeKey = `profile-view:${profile.id}:${visitorHash}`;
-        const shouldRecord = await app.redis.set(dedupeKey, "1", "EX", 30, "NX");
-        if (!shouldRecord) {
+        const existingView = await app.prisma.profileView.findUnique({
+            where: { profileId_visitorHash: { profileId: profile.id, visitorHash } },
+            select: { id: true }
+        });
+        if (existingView) {
             return { ok: true, deduped: true, viewCount: profile.viewCount };
         }
-        const [updatedProfile] = await app.prisma.$transaction([
-            app.prisma.profile.update({
-                where: { id: profile.id },
-                data: { viewCount: { increment: 1 } }
-            }),
-            app.prisma.profileView.create({
-                data: { profileId: profile.id, visitorHash, referrer, country, browser, device }
-            }),
-            app.prisma.analyticsEvent.create({
-                data: {
-                    profileId: profile.id,
-                    type: "PROFILE_VIEW",
-                    path: request.url,
-                    referrer,
-                    visitorHash,
-                    ipHash,
-                    country,
-                    browser,
-                    device
-                }
-            })
-        ]);
+        let updatedProfile;
+        try {
+            [updatedProfile] = await app.prisma.$transaction([
+                app.prisma.profile.update({
+                    where: { id: profile.id },
+                    data: { viewCount: { increment: 1 } },
+                    select: { viewCount: true }
+                }),
+                app.prisma.profileView.create({
+                    data: { profileId: profile.id, visitorHash, referrer, country, browser, device }
+                }),
+                app.prisma.analyticsEvent.create({
+                    data: {
+                        profileId: profile.id,
+                        type: "PROFILE_VIEW",
+                        path: request.url,
+                        referrer,
+                        visitorHash,
+                        ipHash,
+                        country,
+                        browser,
+                        device
+                    }
+                })
+            ]);
+        }
+        catch (error) {
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+                const current = await app.prisma.profile.findUnique({
+                    where: { id: profile.id },
+                    select: { viewCount: true }
+                });
+                return { ok: true, deduped: true, viewCount: current?.viewCount ?? profile.viewCount };
+            }
+            throw error;
+        }
         app.io.to(`profile:${profile.user.username}`).emit("profile:view", {
             username: profile.user.username,
             viewCount: updatedProfile.viewCount
         });
         return { ok: true, viewCount: updatedProfile.viewCount };
     });
-    app.get("/api/leaderboard", async () => {
+    app.get("/api/leaderboard", async (request) => {
         const profiles = await app.prisma.profile.findMany({
             where: { isPublic: true, user: { isBanned: false } },
             orderBy: [{ viewCount: "desc" }, { createdAt: "asc" }],
             take: 50,
             include: {
                 user: { select: { username: true } },
-                files: { where: { deletedAt: null }, take: 1 }
+                files: { where: { deletedAt: null, kind: "AVATAR" } }
             }
         });
         return {
-            profiles: profiles.map((profile, index) => ({
-                rank: index + 1,
-                username: profile.user.username,
-                displayName: profile.displayName,
-                bio: profile.bio,
-                viewCount: profile.viewCount,
-                layout: profile.layout
-            }))
+            profiles: profiles.map((profile, index) => {
+                const fileById = new Map(profile.files.map((file) => [file.id, file]));
+                return {
+                    rank: index + 1,
+                    username: profile.user.username,
+                    displayName: profile.displayName,
+                    bio: profile.bio,
+                    viewCount: profile.viewCount,
+                    layout: profile.layout,
+                    avatar: serializeAsset(request, profile.avatarFileId ? fileById.get(profile.avatarFileId) : null)
+                };
+            })
         };
     });
     app.post("/api/links", async (request) => {
@@ -417,6 +451,8 @@ function profileInclude(visibleOnly) {
 }
 function serializeProfile(request, profile) {
     const fileById = new Map(profile.files.map((file) => [file.id, file]));
+    const musicActivity = asRecord(profile.musicActivity);
+    const musicCoverFileId = typeof musicActivity.coverFileId === "string" ? musicActivity.coverFileId : "";
     return {
         profile: {
             id: profile.id,
@@ -447,6 +483,7 @@ function serializeProfile(request, profile) {
                 banner: serializeAsset(request, profile.bannerFileId ? fileById.get(profile.bannerFileId) : null),
                 background: serializeAsset(request, profile.backgroundFileId ? fileById.get(profile.backgroundFileId) : null),
                 audio: serializeAsset(request, profile.audioFileId ? fileById.get(profile.audioFileId) : null),
+                musicCover: serializeAsset(request, musicCoverFileId ? fileById.get(musicCoverFileId) : null),
                 cursor: serializeAsset(request, profile.cursorFileId ? fileById.get(profile.cursorFileId) : null),
                 metadata: serializeAsset(request, profile.metadataFileId ? fileById.get(profile.metadataFileId) : null)
             }
@@ -473,6 +510,27 @@ function serializeProfile(request, profile) {
             icon: serializeAsset(request, userBadge.badge.icon)
         }))
     };
+}
+async function validateMusicCoverFile(app, userId, musicActivity) {
+    const coverFileId = asRecord(musicActivity).coverFileId;
+    if (coverFileId === undefined || coverFileId === null || coverFileId === "")
+        return;
+    const parsed = z.string().cuid().safeParse(coverFileId);
+    if (!parsed.success)
+        fail(400, "INVALID_FILE_ASSET", "Selected music cover file is invalid");
+    const count = await app.prisma.fileAsset.count({
+        where: {
+            id: parsed.data,
+            ownerUserId: userId,
+            deletedAt: null,
+            kind: { in: ["MUSIC_COVER", "METADATA_IMAGE", "OTHER"] }
+        }
+    });
+    if (count !== 1)
+        fail(400, "INVALID_FILE_ASSET", "Selected music cover file is invalid");
+}
+function asRecord(value) {
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 async function validateProfileFiles(app, userId, body) {
     const ids = [

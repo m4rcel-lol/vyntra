@@ -50,6 +50,12 @@ const templateAdminPatchSchema = z.object({
   tags: z.array(z.string().trim().min(1).max(24)).max(10).optional()
 });
 
+const resetViewsSchema = z.object({
+  mode: z.enum(["zero", "recalculate"]).default("zero")
+});
+
+const protectedBadgeSlugs = new Set(["owner"]);
+
 export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
   app.addHook("preHandler", async (request) => {
     if (request.url.startsWith("/api/admin")) {
@@ -170,6 +176,7 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
   app.post("/api/admin/badges", async (request) => {
     const actor = requireRole(request, ["ADMIN"]);
     const body = globalBadgeSchema.parse(request.body);
+    assertBadgeIsNotProtected(body.slug);
     const badge = await app.prisma.badge.upsert({
       where: { slug: body.slug },
       create: {
@@ -204,6 +211,7 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
       app.prisma.badge.findUnique({ where: { id: body.badgeId } })
     ]);
     if (!profile || !badge) fail(404, "NOT_FOUND", "Profile or badge was not found");
+    assertBadgeIsNotProtected(badge.slug);
     const userBadge = await app.prisma.userBadge.upsert({
       where: { profileId_badgeId: { profileId: profile.id, badgeId: badge.id } },
       create: { profileId: profile.id, badgeId: badge.id, assignedById: actor.id },
@@ -216,6 +224,12 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
   app.delete("/api/admin/profiles/:profileId/badges/:badgeId", async (request) => {
     const actor = requireRole(request, ["ADMIN", "MODERATOR"]);
     const params = z.object({ profileId: z.string().cuid(), badgeId: z.string().cuid() }).parse(request.params);
+    const badge = await app.prisma.badge.findUnique({
+      where: { id: params.badgeId },
+      select: { slug: true }
+    });
+    if (!badge) fail(404, "BADGE_NOT_FOUND", "Badge was not found");
+    assertBadgeIsNotProtected(badge.slug);
     await app.prisma.userBadge.deleteMany({
       where: {
         profileId: params.profileId,
@@ -322,6 +336,48 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
+  app.post("/api/admin/profiles/:id/views/reset", async (request) => {
+    const actor = requireRole(request, ["ADMIN"]);
+    const params = z.object({ id: z.string().cuid() }).parse(request.params);
+    const body = resetViewsSchema.parse(request.body ?? {});
+    const profile = await app.prisma.profile.findUnique({
+      where: { id: params.id },
+      include: { user: { select: { username: true } } }
+    });
+    if (!profile) fail(404, "PROFILE_NOT_FOUND", "Profile was not found");
+
+    if (body.mode === "recalculate") {
+      const uniqueViews = await app.prisma.profileView.count({ where: { profileId: profile.id } });
+      const updated = await app.prisma.profile.update({
+        where: { id: profile.id },
+        data: { viewCount: uniqueViews },
+        select: { id: true, viewCount: true }
+      });
+      await audit(app, actor.id, "profile.views.recalculate", "PROFILE", profile.id, { viewCount: uniqueViews });
+      app.io.to(`profile:${profile.user.username}`).emit("profile:view", {
+        username: profile.user.username,
+        viewCount: updated.viewCount
+      });
+      return { ok: true, profileId: updated.id, viewCount: updated.viewCount };
+    }
+
+    const [updated] = await app.prisma.$transaction([
+      app.prisma.profile.update({
+        where: { id: profile.id },
+        data: { viewCount: 0 },
+        select: { id: true, viewCount: true }
+      }),
+      app.prisma.profileView.deleteMany({ where: { profileId: profile.id } }),
+      app.prisma.analyticsEvent.deleteMany({ where: { profileId: profile.id, type: "PROFILE_VIEW" } })
+    ]);
+    await audit(app, actor.id, "profile.views.reset", "PROFILE", profile.id, {});
+    app.io.to(`profile:${profile.user.username}`).emit("profile:view", {
+      username: profile.user.username,
+      viewCount: updated.viewCount
+    });
+    return { ok: true, profileId: updated.id, viewCount: updated.viewCount };
+  });
+
   app.patch("/api/admin/templates/:id", async (request) => {
     const actor = requireRole(request, ["ADMIN", "MODERATOR"]);
     const params = z.object({ id: z.string().cuid() }).parse(request.params);
@@ -337,6 +393,12 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
     await audit(app, actor.id, "template.manage", "TEMPLATE", template.id, body);
     return { template };
   });
+}
+
+function assertBadgeIsNotProtected(slug: string): void {
+  if (protectedBadgeSlugs.has(slug.toLowerCase())) {
+    fail(403, "BADGE_PROTECTED", "The Owner badge is managed by the system and cannot be changed from the admin panel");
+  }
 }
 
 async function audit(

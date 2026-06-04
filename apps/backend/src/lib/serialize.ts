@@ -9,6 +9,7 @@ export type PublicAsset = {
   kind: string;
   originalName: string;
   sizeBytes: number;
+  metadata: Record<string, unknown>;
 };
 
 export function requestOrigin(request: FastifyRequest): string {
@@ -30,8 +31,22 @@ export function serializeAsset(request: FastifyRequest, asset: FileAsset | null 
     mimeType: asset.mimeType,
     kind: asset.kind,
     originalName: asset.originalName,
-    sizeBytes: asset.sizeBytes
+    sizeBytes: asset.sizeBytes,
+    metadata: serializeAssetMetadata(request, asset.metadata)
   };
+}
+
+function serializeAssetMetadata(request: FastifyRequest, metadata: unknown): Record<string, unknown> {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return {};
+  const result = { ...(metadata as Record<string, unknown>) };
+  if (result.cover && typeof result.cover === "object" && !Array.isArray(result.cover)) {
+    const cover = { ...(result.cover as Record<string, unknown>) };
+    if (typeof cover.publicId === "string") {
+      cover.url = assetUrl(request, cover.publicId);
+    }
+    result.cover = cover;
+  }
+  return result;
 }
 
 function firstHeader(value: string | string[] | undefined): string | undefined {
