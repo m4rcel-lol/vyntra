@@ -47,12 +47,12 @@ export const IdentityTab = () => {
       </Field>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Avatar"><FileUploadMock value={profile.avatar} onChange={(v, asset) => { setField('avatar', v); setNested('assetIds', 'avatarFileId', asset?.id ?? null); }} label="Avatar" aspect="aspect-square" /></Field>
-        <Field label="Banner"><FileUploadMock value={profile.banner} onChange={(v, asset) => { setField('banner', v); setNested('assetIds', 'bannerFileId', asset?.id ?? null); }} label="Banner" aspect="aspect-video" /></Field>
+        <Field label="Avatar"><FileUploadMock value={profile.avatar} onChange={(v, asset) => { setField('avatar', v); setNested('assetIds', 'avatarFileId', asset?.id ?? null); }} label="Avatar" kind="AVATAR" aspect="aspect-square" /></Field>
+        <Field label="Banner"><FileUploadMock value={profile.banner} onChange={(v, asset) => { setField('banner', v); setNested('assetIds', 'bannerFileId', asset?.id ?? null); }} label="Banner" kind="BANNER" aspect="aspect-video" /></Field>
       </div>
 
       <Field label="Profile song" hint="Upload a local music file for the public profile player. It is compressed before storage.">
-        <FileUploadMock value={profile.music?.src} onChange={applyMusicUpload} label="Music" aspect="aspect-[4/1]" />
+        <FileUploadMock value={profile.music?.src} onChange={applyMusicUpload} label="Music" kind="AUDIO" aspect="aspect-[4/1]" />
       </Field>
 
       <Field label="Accent color" hint="Tints glows, badges and highlights.">

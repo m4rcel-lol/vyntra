@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { secureCookies } from "../env.js";
 import { requireUser } from "../lib/auth.js";
+import { assertUserBadgeIsAllowed } from "../lib/badge-policy.js";
 import { sanitizeCustomCss } from "../lib/css.js";
 import { hashIp, hashVisitor } from "../lib/crypto.js";
 import { fail } from "../lib/errors.js";
@@ -386,6 +387,7 @@ export async function registerProfileRoutes(app: FastifyInstance): Promise<void>
     const user = requireUser(request);
     if (!user.profileId) fail(404, "PROFILE_NOT_FOUND", "Profile was not found");
     const body = customBadgeSchema.parse(request.body);
+    assertUserBadgeIsAllowed({ name: body.name, tooltip: body.tooltip });
     if (body.iconFileId) await assertOwnedFile(app, user.id, body.iconFileId);
 
     const badge = await app.prisma.badge.create({
@@ -541,20 +543,31 @@ async function validateProfileFiles(
   userId: string,
   body: z.infer<typeof profileUpdateSchema>
 ): Promise<void> {
-  const ids = [
-    body.avatarFileId,
-    body.bannerFileId,
-    body.backgroundFileId,
-    body.audioFileId,
-    body.cursorFileId,
-    body.metadataFileId
-  ].filter((id): id is string => Boolean(id));
+  const requirements = [
+    { id: body.avatarFileId, kinds: ["AVATAR"] },
+    { id: body.bannerFileId, kinds: ["BANNER"] },
+    { id: body.backgroundFileId, kinds: ["BACKGROUND_IMAGE", "BACKGROUND_VIDEO"] },
+    { id: body.audioFileId, kinds: ["AUDIO"] },
+    { id: body.cursorFileId, kinds: ["CURSOR"] },
+    { id: body.metadataFileId, kinds: ["METADATA_IMAGE"] }
+  ].filter((item): item is { id: string; kinds: string[] } => Boolean(item.id));
 
-  if (ids.length === 0) return;
-  const count = await app.prisma.fileAsset.count({
-    where: { id: { in: ids }, ownerUserId: userId, deletedAt: null }
+  if (requirements.length === 0) return;
+  const files = await app.prisma.fileAsset.findMany({
+    where: {
+      id: { in: requirements.map((item) => item.id) },
+      ownerUserId: userId,
+      deletedAt: null
+    },
+    select: { id: true, kind: true }
   });
-  if (count !== ids.length) fail(400, "INVALID_FILE_ASSET", "One or more selected files are invalid");
+  const fileById = new Map(files.map((file) => [file.id, file]));
+  for (const requirement of requirements) {
+    const file = fileById.get(requirement.id);
+    if (!file || !requirement.kinds.includes(file.kind)) {
+      fail(400, "INVALID_FILE_ASSET", "One or more selected profile assets are invalid for that field");
+    }
+  }
 }
 
 async function assertOwnedFile(app: FastifyInstance, userId: string, id: string): Promise<void> {
