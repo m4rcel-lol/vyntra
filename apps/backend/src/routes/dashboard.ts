@@ -1,12 +1,20 @@
 import type { FastifyInstance } from "fastify";
 import { requireUser } from "../lib/auth.js";
 import { fail } from "../lib/errors.js";
+import { syncRoleBadgeForUser } from "../lib/role-badges.js";
 import { serializeAsset } from "../lib/serialize.js";
 
 export async function registerDashboardRoutes(app: FastifyInstance): Promise<void> {
   app.get("/api/dashboard", async (request) => {
     const user = requireUser(request);
     if (!user.profileId) fail(404, "PROFILE_NOT_FOUND", "Profile was not found");
+    await syncRoleBadgeForUser({
+      prisma: app.prisma,
+      userId: user.id,
+      profileId: user.profileId,
+      role: user.role,
+      assignedById: user.id
+    });
 
     const [profile, recentViews, recentClicks, announcements, fileCount, templateCount] = await Promise.all([
       app.prisma.profile.findUnique({

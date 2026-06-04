@@ -14,7 +14,7 @@ const perkGroups = [
   {
     title: 'Profile design',
     icon: Palette,
-    perks: ['All profile layouts', 'Image, GIF, video, gradient, and solid backgrounds', 'Blur and dark overlays', 'Custom colors, fonts, buttons, badges, and card styling'],
+    perks: ['Focused minimal profile layout', 'Image, GIF, video, gradient, and solid backgrounds', 'Blur and dark overlays', 'Custom colors, fonts, buttons, badges, and card styling'],
   },
   {
     title: 'Effects and media',
@@ -61,7 +61,7 @@ const perkGroups = [
 const stats = [
   { value: '$0', label: 'Paid tiers' },
   { value: '100%', label: 'Features unlocked' },
-  { value: '10', label: 'Profile layouts' },
+  { value: '1', label: 'Minimal layout' },
   { value: 'Local', label: 'Compressed storage' },
 ];
 

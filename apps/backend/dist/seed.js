@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "./lib/crypto.js";
+import { syncRoleBadgeForUserId } from "./lib/role-badges.js";
 const prisma = new PrismaClient();
 const adminUsername = process.env.SEED_ADMIN_USERNAME ?? "owner";
 const adminEmail = process.env.SEED_ADMIN_EMAIL ?? "owner@example.com";
@@ -49,7 +50,7 @@ async function main() {
             username: adminUsername.toLowerCase(),
             email: adminEmail.toLowerCase(),
             passwordHash,
-            role: "ADMIN",
+            role: "OWNER",
             profile: {
                 create: {
                     displayName: "Vyntra Owner",
@@ -94,7 +95,7 @@ async function main() {
         },
         update: {
             email: adminEmail.toLowerCase(),
-            role: "ADMIN"
+            role: "OWNER"
         },
         include: { profile: true }
     });
@@ -106,12 +107,12 @@ async function main() {
                 bio: ownerBio,
                 location: "Vyntra.bio",
                 layout: "minimal-text",
-                statusText: "Creating something memorable"
+                statusText: ""
             }
         });
         const starterSnapshot = {
             layout: "minimal-text",
-            statusText: "Creating something memorable",
+            statusText: "",
             theme: {
                 accentColor: "#d8d8d8",
                 textColor: "#ffffff",
@@ -200,27 +201,17 @@ async function main() {
             }
         });
     }
-    const ownerBadge = await prisma.badge.findUnique({ where: { slug: "owner" } });
     const unlimitedBadge = await prisma.badge.findUnique({ where: { slug: "unlimited" } });
-    if (ownerBadge) {
-        const protectedOwners = await prisma.user.findMany({
-            where: { username: { in: protectedOwnerUsernames } },
-            include: { profile: true }
-        });
-        const ownerAssignments = protectedOwners
-            .filter((user) => user.profile)
-            .map((user) => ({
-            profileId: user.profile.id,
-            badgeId: ownerBadge.id,
-            assignedById: admin.id,
-            order: 0
-        }));
-        if (ownerAssignments.length > 0) {
-            await prisma.userBadge.createMany({
-                data: ownerAssignments,
-                skipDuplicates: true
-            });
-        }
+    await prisma.user.updateMany({
+        where: { username: { in: protectedOwnerUsernames } },
+        data: { role: "OWNER" }
+    });
+    const roleUsers = await prisma.user.findMany({
+        where: { role: { in: ["OWNER", "ADMIN", "MODERATOR"] } },
+        select: { id: true }
+    });
+    for (const roleUser of roleUsers) {
+        await syncRoleBadgeForUserId({ prisma, userId: roleUser.id, assignedById: admin.id });
     }
     if (admin.profile && unlimitedBadge) {
         await prisma.userBadge.createMany({

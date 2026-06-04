@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 import {
-  User, LayoutGrid, Image, Sparkles, Link2, Award, Music2,
+  User, Image, Sparkles, Link2, Award, Music2,
   PlaySquare, FileText, BarChart3, SlidersHorizontal, Save, Eye,
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -11,7 +11,6 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from '@/co
 import { useUIStore } from '@/stores/ui.store';
 import { LivePreview } from '@/components/editor/LivePreview';
 import { IdentityTab } from '@/components/editor/tabs/IdentityTab';
-import { LayoutTab } from '@/components/editor/tabs/LayoutTab';
 import { BackgroundTab } from '@/components/editor/tabs/BackgroundTab';
 import { EffectsTab } from '@/components/editor/tabs/EffectsTab';
 import { LinksTab } from '@/components/editor/tabs/LinksTab';
@@ -25,7 +24,6 @@ import { useProfileStore } from '@/stores/profile.store';
 
 const TABS = [
   { v: 'identity', label: 'Identity', icon: User, C: IdentityTab },
-  { v: 'layout', label: 'Layout', icon: LayoutGrid, C: LayoutTab },
   { v: 'background', label: 'Background', icon: Image, C: BackgroundTab },
   { v: 'effects', label: 'Effects', icon: Sparkles, C: EffectsTab },
   { v: 'links', label: 'Links', icon: Link2, C: LinksTab },

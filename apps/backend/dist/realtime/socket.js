@@ -26,7 +26,7 @@ export function registerRealtime(io, prisma) {
         if (user) {
             socket.join(`user:${user.username}`);
             socket.join(`profile:${user.username}`);
-            if (user.role === "ADMIN" || user.role === "MODERATOR")
+            if (user.role === "OWNER" || user.role === "ADMIN" || user.role === "MODERATOR")
                 socket.join("admin");
             io.emit("presence:online", { username: user.username });
         }

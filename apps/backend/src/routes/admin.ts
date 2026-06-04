@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireRole } from "../lib/auth.js";
 import { hashPassword } from "../lib/crypto.js";
 import { fail } from "../lib/errors.js";
+import { isOwnerRole, isRoleBadgeSlug, syncRoleBadgeForUser, syncRoleBadgeForUserId } from "../lib/role-badges.js";
 import { serializeAsset } from "../lib/serialize.js";
 import { usernameSchema } from "../lib/username.js";
 import { passwordSchema } from "../lib/validators.js";
@@ -54,8 +55,6 @@ const resetViewsSchema = z.object({
   mode: z.enum(["zero", "recalculate"]).default("zero")
 });
 
-const protectedBadgeSlugs = new Set(["owner"]);
-
 export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
   app.addHook("preHandler", async (request) => {
     if (request.url.startsWith("/api/admin")) {
@@ -77,41 +76,15 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
 
   app.get("/api/admin/users", async (request) => {
     requireRole(request, ["ADMIN", "MODERATOR"]);
-    const users = await app.prisma.user.findMany({
-      include: {
-        profile: {
-          select: {
-            id: true,
-            uid: true,
-            displayName: true,
-            viewCount: true,
-            isPublic: true,
-            avatarFileId: true,
-            files: {
-              where: { deletedAt: null, kind: "AVATAR" }
-            },
-            badges: {
-              orderBy: { order: "asc" },
-              include: {
-                badge: {
-                  select: {
-                    id: true,
-                    slug: true,
-                    name: true,
-                    color: true,
-                    glowColor: true,
-                    tooltip: true,
-                    isGlobal: true
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      orderBy: { createdAt: "desc" },
-      take: 100
-    });
+    let users = await findAdminUsers(app);
+    await Promise.all(users.map((user) => syncRoleBadgeForUser({
+      prisma: app.prisma,
+      userId: user.id,
+      profileId: user.profile?.id ?? null,
+      role: user.role,
+      assignedById: user.id
+    })));
+    users = await findAdminUsers(app);
     return {
       users: users.map((user) => {
         if (!user.profile) return user;
@@ -159,6 +132,15 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
     const actor = requireRole(request, ["ADMIN"]);
     const params = z.object({ id: z.string().cuid() }).parse(request.params);
     const body = userPatchSchema.parse(request.body);
+    if (body.role === "OWNER") {
+      fail(403, "OWNER_ROLE_PROTECTED", "Owner rank can only be assigned with a direct database command");
+    }
+    const target = await app.prisma.user.findUnique({
+      where: { id: params.id },
+      select: { id: true, role: true }
+    });
+    if (!target) fail(404, "USER_NOT_FOUND", "User was not found");
+    assertUserIsNotOwner(target.role);
     const updated = await app.prisma.user.update({
       where: { id: params.id },
       data: {
@@ -168,6 +150,7 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
         ...(body.newPassword !== undefined ? { passwordHash: await hashPassword(body.newPassword) } : {})
       }
     });
+    await syncRoleBadgeForUserId({ prisma: app.prisma, userId: updated.id, assignedById: actor.id });
     const auditBody = { ...body, ...(body.newPassword ? { newPassword: "[redacted]" } : {}) };
     await audit(app, actor.id, "user.update", "USER", params.id, auditBody);
     return { user: updated };
@@ -207,10 +190,14 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
     const actor = requireRole(request, ["ADMIN", "MODERATOR"]);
     const body = assignBadgeSchema.parse(request.body);
     const [profile, badge] = await Promise.all([
-      app.prisma.profile.findUnique({ where: { id: body.profileId } }),
+      app.prisma.profile.findUnique({
+        where: { id: body.profileId },
+        include: { user: { select: { role: true } } }
+      }),
       app.prisma.badge.findUnique({ where: { id: body.badgeId } })
     ]);
     if (!profile || !badge) fail(404, "NOT_FOUND", "Profile or badge was not found");
+    assertUserIsNotOwner(profile.user.role);
     assertBadgeIsNotProtected(badge.slug);
     const userBadge = await app.prisma.userBadge.upsert({
       where: { profileId_badgeId: { profileId: profile.id, badgeId: badge.id } },
@@ -224,11 +211,19 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
   app.delete("/api/admin/profiles/:profileId/badges/:badgeId", async (request) => {
     const actor = requireRole(request, ["ADMIN", "MODERATOR"]);
     const params = z.object({ profileId: z.string().cuid(), badgeId: z.string().cuid() }).parse(request.params);
-    const badge = await app.prisma.badge.findUnique({
-      where: { id: params.badgeId },
-      select: { slug: true }
-    });
+    const [profile, badge] = await Promise.all([
+      app.prisma.profile.findUnique({
+        where: { id: params.profileId },
+        include: { user: { select: { role: true } } }
+      }),
+      app.prisma.badge.findUnique({
+        where: { id: params.badgeId },
+        select: { slug: true }
+      })
+    ]);
+    if (!profile) fail(404, "PROFILE_NOT_FOUND", "Profile was not found");
     if (!badge) fail(404, "BADGE_NOT_FOUND", "Badge was not found");
+    assertUserIsNotOwner(profile.user.role);
     assertBadgeIsNotProtected(badge.slug);
     await app.prisma.userBadge.deleteMany({
       where: {
@@ -302,6 +297,12 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
   app.delete("/api/admin/files/:id", async (request) => {
     const actor = requireRole(request, ["ADMIN", "MODERATOR"]);
     const params = z.object({ id: z.string().cuid() }).parse(request.params);
+    const existing = await app.prisma.fileAsset.findUnique({
+      where: { id: params.id },
+      include: { owner: { select: { role: true } } }
+    });
+    if (!existing) fail(404, "FILE_NOT_FOUND", "File was not found");
+    assertUserIsNotOwner(existing.owner.role);
     const file = await app.prisma.fileAsset.update({
       where: { id: params.id },
       data: { deletedAt: new Date(), isPublic: false }
@@ -313,8 +314,12 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
   app.delete("/api/admin/profiles/:id", async (request) => {
     const actor = requireRole(request, ["ADMIN", "MODERATOR"]);
     const params = z.object({ id: z.string().cuid() }).parse(request.params);
-    const profile = await app.prisma.profile.findUnique({ where: { id: params.id } });
+    const profile = await app.prisma.profile.findUnique({
+      where: { id: params.id },
+      include: { user: { select: { role: true } } }
+    });
     if (!profile) fail(404, "PROFILE_NOT_FOUND", "Profile was not found");
+    assertUserIsNotOwner(profile.user.role);
     await app.prisma.$transaction([
       app.prisma.link.deleteMany({ where: { profileId: profile.id } }),
       app.prisma.userBadge.deleteMany({ where: { profileId: profile.id } }),
@@ -325,7 +330,7 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
           displayName: "Removed profile",
           bio: "",
           location: "",
-          statusText: "Removed by moderation",
+          statusText: "",
           customCss: "",
           sanitizedCss: "",
           embeds: []
@@ -342,9 +347,10 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
     const body = resetViewsSchema.parse(request.body ?? {});
     const profile = await app.prisma.profile.findUnique({
       where: { id: params.id },
-      include: { user: { select: { username: true } } }
+      include: { user: { select: { username: true, role: true } } }
     });
     if (!profile) fail(404, "PROFILE_NOT_FOUND", "Profile was not found");
+    assertUserIsNotOwner(profile.user.role);
 
     if (body.mode === "recalculate") {
       const uniqueViews = await app.prisma.profileView.count({ where: { profileId: profile.id } });
@@ -382,6 +388,12 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
     const actor = requireRole(request, ["ADMIN", "MODERATOR"]);
     const params = z.object({ id: z.string().cuid() }).parse(request.params);
     const body = templateAdminPatchSchema.parse(request.body);
+    const existing = await app.prisma.template.findUnique({
+      where: { id: params.id },
+      include: { owner: { select: { role: true } } }
+    });
+    if (!existing) fail(404, "TEMPLATE_NOT_FOUND", "Template was not found");
+    assertUserIsNotOwner(existing.owner.role);
     const template = await app.prisma.template.update({
       where: { id: params.id },
       data: {
@@ -395,9 +407,53 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
   });
 }
 
+async function findAdminUsers(app: FastifyInstance) {
+  return app.prisma.user.findMany({
+    include: {
+      profile: {
+        select: {
+          id: true,
+          uid: true,
+          displayName: true,
+          viewCount: true,
+          isPublic: true,
+          avatarFileId: true,
+          files: {
+            where: { deletedAt: null, kind: "AVATAR" }
+          },
+          badges: {
+            orderBy: { order: "asc" },
+            include: {
+              badge: {
+                select: {
+                  id: true,
+                  slug: true,
+                  name: true,
+                  color: true,
+                  glowColor: true,
+                  tooltip: true,
+                  isGlobal: true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    orderBy: { createdAt: "desc" },
+    take: 100
+  });
+}
+
+function assertUserIsNotOwner(role: UserRole): void {
+  if (isOwnerRole(role)) {
+    fail(403, "OWNER_PROTECTED", "Owner accounts are protected and can only be changed with direct database access");
+  }
+}
+
 function assertBadgeIsNotProtected(slug: string): void {
-  if (protectedBadgeSlugs.has(slug.toLowerCase())) {
-    fail(403, "BADGE_PROTECTED", "The Owner badge is managed by the system and cannot be changed from the admin panel");
+  if (isRoleBadgeSlug(slug)) {
+    fail(403, "BADGE_PROTECTED", "Role badges are managed by the system and cannot be changed from the admin panel");
   }
 }
 

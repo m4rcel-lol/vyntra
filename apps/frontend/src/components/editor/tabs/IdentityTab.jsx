@@ -38,10 +38,6 @@ export const IdentityTab = () => {
         </Field>
       </div>
 
-      <Field label="Status" hint="A short line shown under your name.">
-        <Input value={profile.status} onChange={(e) => setField('status', e.target.value)} placeholder="What are you up to?" />
-      </Field>
-
       <Field label="Bio" hint={`${(profile.bio || '').length}/180`}>
         <Textarea value={profile.bio} onChange={(e) => setField('bio', e.target.value.slice(0, 180))} rows={3} data-testid="id-bio" />
       </Field>

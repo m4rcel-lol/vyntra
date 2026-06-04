@@ -45,7 +45,7 @@ export const SidebarContent = ({ collapsed = false, onNavigate }) => {
     displayName: data?.profile?.displayName || authUser.displayName,
     avatar: data?.profile?.avatar || authUser.avatar,
   };
-  const navItems = NAV_ITEMS.filter((item) => !item.adminOnly || user.role === 'admin');
+  const navItems = NAV_ITEMS.filter((item) => !item.adminOnly || ['owner', 'admin'].includes(user.role));
 
   const handleLogout = async () => {
     await logout();

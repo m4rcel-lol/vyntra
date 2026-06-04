@@ -24,7 +24,7 @@ const CHECKLIST = [
   { label: 'Add a bio', done: true },
   { label: 'Upload an avatar', done: true },
   { label: 'Add 3+ social links', done: true },
-  { label: 'Choose a layout', done: true },
+  { label: 'Use the minimal profile layout', done: true },
   { label: 'Set a background', done: true },
   { label: 'Add a music track', done: false },
   { label: 'Verify your account', done: false },

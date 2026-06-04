@@ -35,7 +35,7 @@ const envSchema = z.object({
   SESSION_COOKIE_SECURE: optionalBooleanFromEnv,
   TRUST_PROXY: booleanFromEnv.default(true),
   STORAGE_DIR: z.string().min(1).default("/app/uploads"),
-  MAX_UPLOAD_MB: z.coerce.number().int().min(1).max(100).default(30)
+  MAX_UPLOAD_MB: z.coerce.number().int().min(1).max(100).default(100)
 });
 
 export const env = envSchema.parse(process.env);

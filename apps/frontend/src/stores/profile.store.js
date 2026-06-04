@@ -127,7 +127,7 @@ export const useProfileStore = create((set, get) => ({
       profile: {
         ...s.profile,
         accent: template.accent,
-        layout: template.layout,
+        layout: 'minimal',
         background: { ...s.profile.background, type: 'image', image: template.preview, overlay: 55, blur: 4 },
       },
       dirty: true,

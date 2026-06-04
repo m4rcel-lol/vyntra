@@ -24,7 +24,7 @@ import { cn } from '@/lib/utils';
 const PROOF = ['Streamers', 'Designers', 'Musicians', 'Developers', 'Gamers', 'Photographers', 'Founders', 'Artists'];
 
 const FEATURES = [
-  { icon: Layers, title: '10 cinematic layouts', desc: 'Centered, wide, minimal, sidebar, floating, terminal, portfolio, spotlight, stacked, and editorial. Switch in one click.' },
+  { icon: Layers, title: 'Focused minimal profile', desc: 'A single polished layout keeps every page clean, fast, responsive, and recognizable.' },
   { icon: Palette, title: 'Total customization', desc: 'Gradients, images, GIFs and video backgrounds with blur, overlays and accent control.' },
   { icon: Wand2, title: 'Living effects', desc: 'Particles, snow, rain, stars, glow borders, cursor trails and a click-to-enter intro.' },
   { icon: Music, title: 'Background audio', desc: 'Set a signature track with a frosted player. Never autoplays without consent.' },
@@ -34,7 +34,7 @@ const FEATURES = [
 
 const STEPS = [
   { n: '01', title: 'Claim your link', desc: 'Grab your unique vyntra.bio/username in seconds.' },
-  { n: '02', title: 'Design it live', desc: 'Tune layout, effects and links with an instant live preview.' },
+  { n: '02', title: 'Design it live', desc: 'Tune effects, media, colors and links with an instant live preview.' },
   { n: '03', title: 'Share everywhere', desc: 'One link for every platform, fully responsive and lightning fast.' },
 ];
 
@@ -46,16 +46,16 @@ const STATS = [
 ];
 
 const INCLUSIONS = [
-  { name: 'Create', highlight: false, features: ['Public profile page', 'All card layouts', 'Unlimited links', 'Community templates', 'Mobile responsive pages'], cta: 'Start building' },
+  { name: 'Create', highlight: false, features: ['Public profile page', 'Minimal identity layout', 'Unlimited links', 'Community templates', 'Mobile responsive pages'], cta: 'Start building' },
   { name: 'Customize', highlight: true, features: ['Video and image backgrounds', 'Background audio', 'Particles and cursor effects', 'Custom CSS with sanitization', 'Unlimited badges'], cta: 'Open the editor' },
   { name: 'Understand', highlight: false, features: ['Profile views', 'Unique visitors', 'Link click counts', 'Referrer and device summaries', 'Template import stats'], cta: 'View analytics' },
 ];
 
 const FAQS = [
-  { q: 'Is Vyntra.bio really free?', a: 'Yes. Every profile layout, effect, badge, template, upload type, and analytics view is available to every user for free.' },
+  { q: 'Is Vyntra.bio really free?', a: 'Yes. Every effect, badge, template, upload type, and analytics view is available to every user for free.' },
   { q: 'Do I need to know how to code?', a: 'Not at all. Everything is visual with a live preview. Advanced users can still add sanitized custom CSS.' },
   { q: 'Can I use my own domain?', a: 'Yes. The app is reverse-proxy ready, so self-hosted installs can route custom domains through Caddy, Nginx, or Traefik.' },
-  { q: 'Will my profile work on mobile?', a: 'Every layout is fully responsive and tuned for fast loads on any device.' },
+  { q: 'Will my profile work on mobile?', a: 'The minimal profile layout is fully responsive and tuned for fast loads on any device.' },
   { q: 'Can I migrate my existing links?', a: 'Import a community template or start from scratch. Adding and reordering links takes seconds.' },
 ];
 

@@ -149,6 +149,7 @@ For local backend development outside `npm run dev`, PostgreSQL and Valkey must 
 - Keep secrets in `.env`; the Compose file references environment variables and does not need hardcoded passwords.
 - Keep `TRUST_PROXY=true` when running behind Caddy, Nginx, or Traefik.
 - Terminate TLS at the reverse proxy and forward `/api/*`, `/socket.io/*`, and `/health` to the backend.
+- Allow upload request bodies up to the configured `MAX_UPLOAD_MB` value. The default app limit is 100 MB before compression, so Nginx should use `client_max_body_size 100m;`; the included Caddy example sets `request_body max_size 100MB`.
 - The backend stores only hashed session tokens and anonymized visitor hashes.
 - Uploaded assets are compressed before they are written to disk and are served through backend proxied public URLs.
 - The backend stores uploads under `STORAGE_DIR`, which defaults to `/app/uploads` in Docker and is persisted with the `uploads_data` volume.

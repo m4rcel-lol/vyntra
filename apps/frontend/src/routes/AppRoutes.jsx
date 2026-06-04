@@ -100,6 +100,6 @@ const AdminOnly = ({ children }) => {
 
   if (!checked || loading) return <LoadingScreen />;
   if (!isAuthenticated) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
-  if (user?.role !== 'admin') return <Navigate to="/dashboard" replace />;
+  if (!['owner', 'admin'].includes(user?.role)) return <Navigate to="/dashboard" replace />;
   return children;
 };

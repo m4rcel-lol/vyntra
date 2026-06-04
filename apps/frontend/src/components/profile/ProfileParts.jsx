@@ -22,12 +22,6 @@ export const ProfileIdentity = ({ profile, align = 'center', className }) => {
     <div className={cn(align === 'center' ? 'text-center' : 'text-left', className)}>
       <h1 className="font-display text-2xl font-semibold tracking-tight">{profile.displayName}</h1>
       <ProfileUsername profile={profile} align={align} />
-      {profile.status && (
-        <span className={cn('mt-2 inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary/40 px-3 py-1 text-xs text-foreground/80', align === 'center' ? 'mx-auto' : '')}>
-          <span className="h-1.5 w-1.5 rounded-full" style={{ background: `hsl(${profile.accent})` }} />
-          {profile.status}
-        </span>
-      )}
       {profile.bio && <p className="mt-3 text-sm leading-relaxed text-foreground/80">{profile.bio}</p>}
     </div>
   );

@@ -146,8 +146,8 @@ export async function registerTemplateRoutes(app: FastifyInstance): Promise<void
     if (!profile) fail(404, "PROFILE_NOT_FOUND", "Profile was not found");
 
     const snapshot = {
-      layout: profile.layout,
-      statusText: profile.statusText,
+      layout: "minimal-text",
+      statusText: "",
       theme: profile.theme,
       effects: profile.effects,
       metadata: profile.metadata,
@@ -241,8 +241,8 @@ export async function registerTemplateRoutes(app: FastifyInstance): Promise<void
       await tx.profile.update({
         where: { id: user.profileId! },
         data: {
-          layout: snapshot.layout,
-          statusText: snapshot.statusText,
+          layout: "minimal-text",
+          statusText: "",
           theme: snapshot.theme as Prisma.InputJsonValue,
           effects: snapshot.effects as Prisma.InputJsonValue,
           metadata: snapshot.metadata as Prisma.InputJsonValue,

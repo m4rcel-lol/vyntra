@@ -1,1 +1,0 @@
-import{c as e}from"./index-BDE3PH8R.js";var t={getProfile:()=>e.current(),getPublicProfile:t=>e.public(t),updateProfile:t=>e.update(t),recordView:t=>e.recordView(t),recordLinkClick:t=>e.recordLinkClick(t),createLink:t=>e.createLink(t),updateLink:(t,n)=>e.updateLink(t,n),deleteLink:t=>e.deleteLink(t),listProfiles:()=>e.leaderboard()};export{t};

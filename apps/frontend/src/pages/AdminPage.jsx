@@ -30,8 +30,9 @@ const emptyBadgeForm = {
 };
 
 const roleOptions = ['user', 'moderator', 'admin'];
-const protectedBadgeSlugs = new Set(['owner']);
+const protectedBadgeSlugs = new Set(['owner', 'staff', 'moderator']);
 const isProtectedBadge = (badge) => protectedBadgeSlugs.has(String(badge?.slug || '').toLowerCase());
+const isOwnerUser = (user) => String(user?.role || '').toLowerCase() === 'owner';
 
 export default function AdminPage() {
   const queryClient = useQueryClient();
@@ -124,6 +125,10 @@ export default function AdminPage() {
   const selectedIsVerified = !!selectedUser?.badges?.some((badge) => badge.slug === 'verified');
 
   const toggleVerified = (user = selectedUser) => {
+    if (isOwnerUser(user)) {
+      toast.error('Owner accounts can only be changed with a direct database command');
+      return;
+    }
     if (!user?.profileId || !verifiedBadge) return;
     const hasVerified = user.badges?.some((badge) => badge.slug === 'verified');
     if (hasVerified) {
@@ -145,17 +150,29 @@ export default function AdminPage() {
   };
 
   const assignSelectedBadge = () => {
+    if (isOwnerUser(selectedUser)) {
+      toast.error('Owner accounts can only be changed with a direct database command');
+      return;
+    }
     if (!selectedUser?.profileId || !assignBadgeId) return;
     assignBadge.mutate({ profileId: selectedUser.profileId, badgeId: assignBadgeId });
   };
 
   const resetSelectedPassword = () => {
+    if (isOwnerUser(selectedUser)) {
+      toast.error('Owner accounts can only be changed with a direct database command');
+      return;
+    }
     if (!selectedUser || !newPassword) return;
     updateUser.mutate({ id: selectedUser.id, patch: { newPassword } });
     setNewPassword('');
   };
 
   const resetSelectedViews = () => {
+    if (isOwnerUser(selectedUser)) {
+      toast.error('Owner accounts can only be changed with a direct database command');
+      return;
+    }
     if (!selectedUser?.profileId) return;
     const confirmed = window.confirm(`Reset all views and view analytics for @${selectedUser.username}? This cannot be undone.`);
     if (!confirmed) return;
@@ -259,7 +276,7 @@ export default function AdminPage() {
                             <Button
                               variant={isVerified ? 'outline' : 'secondary'}
                               size="sm"
-                              disabled={!verifiedBadge || !user.profileId}
+                              disabled={!verifiedBadge || !user.profileId || isOwnerUser(user)}
                               onClick={(event) => {
                                 event.stopPropagation();
                                 toggleVerified(user);
@@ -289,9 +306,10 @@ export default function AdminPage() {
               onToggleVerified={() => toggleVerified()}
               onAssignBadge={assignSelectedBadge}
               onRemoveBadge={(badgeId) => selectedUser?.profileId && removeBadge.mutate({ profileId: selectedUser.profileId, badgeId })}
-              onUpdateRole={(role) => selectedUser && updateUser.mutate({ id: selectedUser.id, patch: { role: role.toUpperCase() } })}
+              onUpdateRole={(role) => selectedUser && !isOwnerUser(selectedUser) && updateUser.mutate({ id: selectedUser.id, patch: { role: role.toUpperCase() } })}
               onToggleBan={() =>
                 selectedUser &&
+                !isOwnerUser(selectedUser) &&
                 updateUser.mutate({
                   id: selectedUser.id,
                   patch: {
@@ -300,7 +318,7 @@ export default function AdminPage() {
                   },
                 })
               }
-              onSaveBanReason={(reason) => selectedUser && updateUser.mutate({ id: selectedUser.id, patch: { banReason: reason || null } })}
+              onSaveBanReason={(reason) => selectedUser && !isOwnerUser(selectedUser) && updateUser.mutate({ id: selectedUser.id, patch: { banReason: reason || null } })}
               onResetPassword={resetSelectedPassword}
               onResetViews={resetSelectedViews}
             />
@@ -469,6 +487,8 @@ function UserManagementCard({
     );
   }
 
+  const ownerLocked = isOwnerUser(user);
+
   return (
     <GlassCard className="p-5">
       <div className="flex items-start justify-between gap-4">
@@ -500,15 +520,22 @@ function UserManagementCard({
       </div>
 
       <div className="mt-5 grid gap-4">
-        <Button variant="outline" disabled={!user.profileId || user.views <= 0} onClick={onResetViews}>
+        {ownerLocked && (
+          <div className="rounded-xl border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-xs text-amber-100">
+            Owner accounts are system protected. Change owner rank only with a direct database command.
+          </div>
+        )}
+
+        <Button variant="outline" disabled={ownerLocked || !user.profileId || user.views <= 0} onClick={onResetViews}>
           <RotateCcw className="h-4 w-4" /> Reset profile views
         </Button>
 
         <label className="space-y-2 text-sm">
           <span>Role</span>
-          <Select value={user.role} onValueChange={onUpdateRole}>
+          <Select value={user.role} onValueChange={onUpdateRole} disabled={ownerLocked}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
+              {ownerLocked && <SelectItem value="owner">owner</SelectItem>}
               {roleOptions.map((role) => (
                 <SelectItem key={role} value={role}>{role}</SelectItem>
               ))}
@@ -517,10 +544,10 @@ function UserManagementCard({
         </label>
 
         <div className="grid gap-2 sm:grid-cols-2">
-          <Button variant={selectedIsVerified ? 'outline' : 'secondary'} disabled={!verifiedBadge || !user.profileId} onClick={onToggleVerified}>
+          <Button variant={selectedIsVerified ? 'outline' : 'secondary'} disabled={ownerLocked || !verifiedBadge || !user.profileId} onClick={onToggleVerified}>
             <BadgeCheck className="h-4 w-4" /> {selectedIsVerified ? 'Remove verified' : 'Mark verified'}
           </Button>
-          <Button variant={user.isBanned ? 'outline' : 'destructive'} onClick={onToggleBan}>
+          <Button variant={user.isBanned ? 'outline' : 'destructive'} disabled={ownerLocked} onClick={onToggleBan}>
             {user.isBanned ? <CheckCircle2 className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
             {user.isBanned ? 'Unban user' : 'Ban user'}
           </Button>
@@ -528,8 +555,8 @@ function UserManagementCard({
 
         <label className="space-y-2 text-sm">
           <span>Ban reason</span>
-          <Textarea value={banReasonDraft} onChange={(e) => setBanReasonDraft(e.target.value)} placeholder="Visible to admins for context." />
-          <Button size="sm" variant="outline" onClick={() => onSaveBanReason(banReasonDraft)}>Save reason</Button>
+          <Textarea value={banReasonDraft} onChange={(e) => setBanReasonDraft(e.target.value)} placeholder="Visible to admins for context." disabled={ownerLocked} />
+          <Button size="sm" variant="outline" disabled={ownerLocked} onClick={() => onSaveBanReason(banReasonDraft)}>Save reason</Button>
         </label>
 
         <div className="space-y-2">
@@ -541,7 +568,7 @@ function UserManagementCard({
                 <span key={badge.id} className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary/40 px-2.5 py-1 text-xs">
                   <Icon name={badge.icon} fallback="Award" className="h-3.5 w-3.5" />
                   {badge.name}
-                  {protectedBadge ? (
+                  {protectedBadge || ownerLocked ? (
                     <LockKeyhole className="ml-1 h-3 w-3 text-amber-300" aria-label="System protected" />
                   ) : (
                     <button onClick={() => onRemoveBadge(badge.id)} className="ml-1 text-muted-foreground transition-colors hover:text-destructive" aria-label={`Remove ${badge.name}`}>
@@ -556,7 +583,7 @@ function UserManagementCard({
         </div>
 
         <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-          <Select value={assignBadgeId} onValueChange={setAssignBadgeId} disabled={!assignableBadges.length || !user.profileId}>
+          <Select value={assignBadgeId} onValueChange={setAssignBadgeId} disabled={ownerLocked || !assignableBadges.length || !user.profileId}>
             <SelectTrigger><SelectValue placeholder={badges.length ? 'Assign badge...' : 'No badges available'} /></SelectTrigger>
             <SelectContent>
               {assignableBadges.map((badge) => (
@@ -564,12 +591,12 @@ function UserManagementCard({
               ))}
             </SelectContent>
           </Select>
-          <Button onClick={onAssignBadge} disabled={!assignBadgeId || !user.profileId}>Assign</Button>
+          <Button onClick={onAssignBadge} disabled={ownerLocked || !assignBadgeId || !user.profileId}>Assign</Button>
         </div>
 
         <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-          <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Manual password reset" />
-          <Button variant="outline" onClick={onResetPassword} disabled={!newPassword}>
+          <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Manual password reset" disabled={ownerLocked} />
+          <Button variant="outline" onClick={onResetPassword} disabled={ownerLocked || !newPassword}>
             <KeyRound className="h-4 w-4" /> Reset
           </Button>
         </div>

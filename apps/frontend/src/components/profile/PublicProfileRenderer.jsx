@@ -4,7 +4,7 @@ import { ProfileBackground } from './ProfileBackground';
 import { ProfileEffects } from './ProfileEffects';
 import { IntroScreen } from './IntroScreen';
 import { MusicPlayer } from './MusicPlayer';
-import { LAYOUTS, CenteredLayout } from './layouts';
+import { MinimalLayout } from './layouts';
 import { cn } from '@/lib/utils';
 
 /**
@@ -23,7 +23,6 @@ export const PublicProfileRenderer = ({ profile, preview = false, forceEntered =
     setViaClick(false);
   }, [needIntro, profile.id]);
 
-  const Layout = LAYOUTS[profile.layout] || CenteredLayout;
   const cursor = profile.advanced?.customCursor ? `url(${profile.advanced.customCursor}), auto` : undefined;
 
   return (
@@ -43,7 +42,7 @@ export const PublicProfileRenderer = ({ profile, preview = false, forceEntered =
       </AnimatePresence>
 
       <div className={cn('relative z-10 flex w-full items-center justify-center px-4', preview ? 'min-h-full py-10' : 'min-h-screen py-16')}>
-        {entered && <Layout profile={profile} />}
+        {entered && <MinimalLayout profile={profile} />}
       </div>
 
       {entered && profile.music?.enabled && profile.music?.src && (

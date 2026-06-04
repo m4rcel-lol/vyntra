@@ -8,6 +8,7 @@ import { sanitizeCustomCss } from "../lib/css.js";
 import { hashIp, hashVisitor } from "../lib/crypto.js";
 import { fail } from "../lib/errors.js";
 import { getClientIp, getCountryFromHeaders, getReferrer, getVisitorHash, parseUserAgent } from "../lib/http.js";
+import { roleBadgeSlug, syncRoleBadgeForUser } from "../lib/role-badges.js";
 import { serializeAsset } from "../lib/serialize.js";
 import { metadataSchema, profileEffectsSchema, profileThemeSchema, urlSchema } from "../lib/validators.js";
 import { isRouteReserved, usernameSchema } from "../lib/username.js";
@@ -16,21 +17,7 @@ const profileUpdateSchema = z.object({
   displayName: z.string().trim().min(1).max(40).optional(),
   bio: z.string().max(500).optional(),
   location: z.string().max(80).optional(),
-  layout: z
-    .enum([
-      "centered-glass",
-      "wide-horizontal",
-      "compact",
-      "minimal-text",
-      "split-sidebar",
-      "floating-card",
-      "terminal",
-      "portfolio-grid",
-      "spotlight",
-      "stacked-links",
-      "editorial"
-    ])
-    .optional(),
+  layout: z.literal("minimal-text").optional(),
   statusText: z.string().max(120).optional(),
   discordPresence: z.record(z.unknown()).optional(),
   musicActivity: z.record(z.unknown()).optional(),
@@ -114,8 +101,7 @@ export async function registerProfileRoutes(app: FastifyInstance): Promise<void>
     if (body.displayName !== undefined) updateData.displayName = body.displayName;
     if (body.bio !== undefined) updateData.bio = body.bio;
     if (body.location !== undefined) updateData.location = body.location;
-    if (body.layout !== undefined) updateData.layout = body.layout;
-    if (body.statusText !== undefined) updateData.statusText = body.statusText;
+    updateData.layout = "minimal-text";
     if (body.discordPresence !== undefined) updateData.discordPresence = body.discordPresence as Prisma.InputJsonValue;
     if (body.musicActivity !== undefined) updateData.musicActivity = body.musicActivity as Prisma.InputJsonValue;
     if (body.theme !== undefined) updateData.theme = body.theme as Prisma.InputJsonValue;
@@ -446,10 +432,40 @@ function profileInclude(visibleOnly: boolean) {
 
 type ProfilePayload = Prisma.ProfileGetPayload<{ include: ReturnType<typeof profileInclude> }>;
 
-function serializeProfile(request: FastifyRequest, profile: ProfilePayload) {
+async function serializeProfile(request: FastifyRequest, profile: ProfilePayload) {
   const fileById = new Map(profile.files.map((file) => [file.id, file]));
   const musicActivity = asRecord(profile.musicActivity);
   const musicCoverFileId = typeof musicActivity.coverFileId === "string" ? musicActivity.coverFileId : "";
+  const roleBadge = await syncRoleBadgeForUser({
+    prisma: request.server.prisma,
+    userId: profile.user.id,
+    profileId: profile.id,
+    role: profile.user.role,
+    assignedById: profile.user.id
+  });
+  const roleBadgeSlugValue = roleBadgeSlug(profile.user.role);
+  const badges = profile.badges.map((userBadge) => ({
+    id: userBadge.badge.id,
+    name: userBadge.badge.name,
+    slug: userBadge.badge.slug,
+    color: userBadge.badge.color,
+    glowColor: userBadge.badge.glowColor,
+    tooltip: userBadge.badge.tooltip,
+    isGlobal: userBadge.badge.isGlobal,
+    icon: serializeAsset(request, userBadge.badge.icon)
+  }));
+  if (roleBadge && roleBadgeSlugValue && !badges.some((badge) => badge.slug === roleBadgeSlugValue)) {
+    badges.unshift({
+      id: roleBadge.id,
+      name: roleBadge.name,
+      slug: roleBadge.slug,
+      color: roleBadge.color,
+      glowColor: roleBadge.glowColor,
+      tooltip: roleBadge.tooltip,
+      isGlobal: roleBadge.isGlobal,
+      icon: serializeAsset(request, roleBadge.icon)
+    });
+  }
   return {
     profile: {
       id: profile.id,
@@ -458,8 +474,8 @@ function serializeProfile(request: FastifyRequest, profile: ProfilePayload) {
       displayName: profile.displayName,
       bio: profile.bio,
       location: profile.location,
-      layout: profile.layout,
-      statusText: profile.statusText,
+      layout: "minimal-text",
+      statusText: "",
       discordPresence: profile.discordPresence,
       musicActivity: profile.musicActivity,
       theme: profile.theme,
@@ -496,16 +512,7 @@ function serializeProfile(request: FastifyRequest, profile: ProfilePayload) {
       style: link.style,
       icon: serializeAsset(request, link.icon)
     })),
-    badges: profile.badges.map((userBadge) => ({
-      id: userBadge.badge.id,
-      name: userBadge.badge.name,
-      slug: userBadge.badge.slug,
-      color: userBadge.badge.color,
-      glowColor: userBadge.badge.glowColor,
-      tooltip: userBadge.badge.tooltip,
-      isGlobal: userBadge.badge.isGlobal,
-      icon: serializeAsset(request, userBadge.badge.icon)
-    }))
+    badges
   };
 }
 

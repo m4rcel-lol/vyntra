@@ -101,7 +101,7 @@ export function requireUser(request) {
 }
 export function requireRole(request, roles) {
     const user = requireUser(request);
-    if (!roles.includes(user.role)) {
+    if (user.role !== "OWNER" && !roles.includes(user.role)) {
         fail(403, "FORBIDDEN", "You do not have permission to perform this action");
     }
     return user;

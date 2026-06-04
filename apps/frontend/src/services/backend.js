@@ -376,14 +376,14 @@ function mapProfileResponse(response) {
     displayName: profile.displayName || username,
     bio: profile.bio || '',
     location: profile.location || '',
-    status: profile.statusText || 'Creating something memorable',
+    status: '',
     avatar,
     banner,
     joinDate: profile.joinedAt || profile.createdAt || new Date().toISOString(),
     uid: String(profile.uid ?? '').padStart(7, '0'),
     views: profile.viewCount ?? 0,
     accent,
-    layout: mapLayout(profile.layout),
+    layout: 'minimal',
     background: {
       type: isVideo ? 'video' : backgroundUrl ? 'image' : 'gradient',
       color: '0 0% 4%',
@@ -438,7 +438,7 @@ function mapProfileResponse(response) {
     discordActivity: {
       username,
       status: 'online',
-      activity: profile.statusText || 'On Vyntra.bio',
+      activity: 'On Vyntra.bio',
       avatar,
     },
     spotifyActivity: hasMusic ? {
@@ -464,7 +464,6 @@ function profileToPatch(profile) {
     displayName: profile.displayName,
     bio: profile.bio,
     location: profile.location,
-    statusText: profile.status,
     musicActivity: profile.music ? {
       title: profile.music.title || '',
       artist: profile.music.artist || '',
@@ -473,7 +472,7 @@ function profileToPatch(profile) {
       loop: profile.music.loop !== false,
       volume: Math.max(0, Math.min(100, Number(profile.music.volume ?? 45))),
     } : undefined,
-    layout: unmapLayout(profile.layout),
+    layout: 'minimal-text',
     clickToEnter: !!profile.effects?.clickToEnter,
     isPublic: profile.advanced?.visibility !== 'private',
     theme: {

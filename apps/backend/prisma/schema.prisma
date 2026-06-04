@@ -12,6 +12,7 @@ enum UserRole {
   USER
   MODERATOR
   ADMIN
+  OWNER
 }
 
 enum AnalyticsEventType {
@@ -104,7 +105,7 @@ model Profile {
   bio               String   @default("")
   location          String   @default("")
   layout            String   @default("minimal-text")
-  statusText        String   @default("Creating something memorable")
+  statusText        String   @default("")
   discordPresence   Json     @default("{}")
   musicActivity     Json     @default("{}")
   theme             Json     @default("{}")

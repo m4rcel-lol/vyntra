@@ -10,7 +10,7 @@
  * @property {string} displayName
  * @property {string} email
  * @property {string} avatar
- * @property {string} role          // 'user' | 'admin' | 'moderator'
+ * @property {string} role          // 'user' | 'moderator' | 'admin' | 'owner'
  * @property {string} plan          // currently always 'Unlimited'
  * @property {string} joinDate
  */
@@ -65,7 +65,6 @@
  * @property {string} displayName
  * @property {string} bio
  * @property {string} location
- * @property {string} status
  * @property {string} avatar
  * @property {string} banner
  * @property {string} joinDate
@@ -87,15 +86,6 @@
 
 export const PROFILE_LAYOUTS = [
   { key: 'minimal', label: 'Minimal', desc: 'Stripped-back, text first' },
-  { key: 'centered', label: 'Centered Card', desc: 'Classic centered profile card' },
-  { key: 'wide', label: 'Wide Card', desc: 'Horizontal banner-led layout' },
-  { key: 'sidebar', label: 'Sidebar', desc: 'Identity left, content right' },
-  { key: 'floating', label: 'Floating', desc: 'Floating glass card in space' },
-  { key: 'terminal', label: 'Terminal', desc: 'Monospaced hacker console' },
-  { key: 'portfolio', label: 'Portfolio Grid', desc: 'Grid of work + links' },
-  { key: 'spotlight', label: 'Spotlight', desc: 'Large hero identity with featured links' },
-  { key: 'stacked', label: 'Stacked Links', desc: 'Banner, avatar, then clean link stack' },
-  { key: 'editorial', label: 'Editorial', desc: 'Magazine-style profile and content grid' },
 ];
 
 export const BACKGROUND_TYPES = ['solid', 'gradient', 'image', 'gif', 'video'];
