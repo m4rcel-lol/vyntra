@@ -60,6 +60,10 @@ Production `.env` values must be safe for Docker Compose interpolation. Use lett
 
 `FRONTEND_PORT` and `BACKEND_PORT` control the host ports exposed by Docker. The backend container still listens internally on `3000`, which keeps health checks and service-to-service networking stable.
 
+For the default Docker Compose setup, leave `VITE_API_URL` and `VITE_SOCKET_URL` empty. The frontend nginx container proxies `/api`, `/socket.io`, and `/health` to the backend internally. This prevents remote browsers from trying to call `localhost:3000`.
+
+When testing directly over plain HTTP, such as `http://server-ip:8080`, set `SESSION_COOKIE_SECURE=false` in `.env` so login cookies can be stored. For real HTTPS production, leave it empty or set `SESSION_COOKIE_SECURE=true`.
+
 3. Build and start the stack:
 
 ```bash
@@ -84,8 +88,11 @@ docker compose exec backend npm run seed
 docker compose logs -f
 ```
 
-Frontend: <http://localhost:8080>  
-Backend health: <http://localhost:3000/health>
+Frontend: <http://localhost:8080><br>
+Backend health through frontend proxy: <http://localhost:8080/health><br>
+Direct backend health: <http://localhost:3000/health>
+
+The backend root URL on port `3000` is API-only. Seeing `Route GET:/ not found` at `http://server-ip:3000/` is expected.
 
 If `vyntra-backend-1` is unhealthy, check the backend logs first:
 
@@ -137,7 +144,8 @@ For local backend development outside `npm run dev`, PostgreSQL and Valkey must 
 
 - Set `NODE_ENV=production`.
 - Use long env-safe random values for `COOKIE_SECRET`, `POSTGRES_PASSWORD`, and `SEED_ADMIN_PASSWORD`.
-- Set `PUBLIC_APP_URL`, `FRONTEND_ORIGIN`, and `API_PUBLIC_URL` to your public HTTPS URLs.
+- Set `PUBLIC_APP_URL` and `FRONTEND_ORIGIN` to your public HTTPS URL.
+- Leave `VITE_API_URL` and `VITE_SOCKET_URL` empty unless you intentionally host the API on a separate public origin.
 - Keep secrets in `.env`; the Compose file references environment variables and does not need hardcoded passwords.
 - Keep `TRUST_PROXY=true` when running behind Caddy, Nginx, or Traefik.
 - Terminate TLS at the reverse proxy and forward `/api/*`, `/socket.io/*`, and `/health` to the backend.
@@ -182,10 +190,18 @@ Valkey is used for cache/rate-limit/session-cache data. PostgreSQL remains the s
 
 ```bash
 git pull
-docker compose build
-docker compose up -d
+docker compose up -d --build --force-recreate
 docker compose exec backend npx prisma migrate deploy
 docker compose logs -f
+```
+
+If an update changes the backend Dockerfile, Prisma engine target, Node version, or Alpine packages, rebuild the backend image without cache:
+
+```bash
+docker compose build --no-cache backend
+docker compose up -d --force-recreate backend frontend
+docker compose exec backend npx prisma migrate deploy
+docker compose logs -f backend
 ```
 
 Run `npm run typecheck` and `npm run build` before publishing local changes.

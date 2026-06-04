@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { isProduction } from "../env.js";
+import { secureCookies } from "../env.js";
 import { requireUser } from "../lib/auth.js";
 import { sanitizeCustomCss } from "../lib/css.js";
 import { hashIp, hashVisitor } from "../lib/crypto.js";
@@ -191,7 +191,7 @@ export async function registerProfileRoutes(app: FastifyInstance): Promise<void>
       reply.setCookie("vyntra_visitor", visitorToken, {
         httpOnly: true,
         sameSite: "lax",
-        secure: isProduction,
+        secure: secureCookies,
         path: "/",
         maxAge: 60 * 60 * 24 * 365
       });

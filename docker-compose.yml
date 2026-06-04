@@ -43,6 +43,7 @@ services:
       COOKIE_SECRET: "${COOKIE_SECRET:?Set COOKIE_SECRET in .env}"
       SESSION_COOKIE_NAME: "${SESSION_COOKIE_NAME:-vyntra_session}"
       SESSION_TTL_DAYS: "${SESSION_TTL_DAYS:-30}"
+      SESSION_COOKIE_SECURE: "${SESSION_COOKIE_SECURE:-}"
       TRUST_PROXY: "${TRUST_PROXY:-true}"
       STORAGE_DIR: /app/uploads
       MAX_UPLOAD_MB: "${MAX_UPLOAD_MB:-30}"
@@ -71,8 +72,8 @@ services:
       context: .
       dockerfile: apps/frontend/Dockerfile
       args:
-        VITE_API_URL: "${API_PUBLIC_URL:-http://localhost:3000}"
-        VITE_SOCKET_URL: "${API_PUBLIC_URL:-http://localhost:3000}"
+        VITE_API_URL: "${VITE_API_URL:-}"
+        VITE_SOCKET_URL: "${VITE_SOCKET_URL:-}"
     restart: unless-stopped
     depends_on:
       backend:

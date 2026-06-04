@@ -12,6 +12,8 @@ export declare const env: {
     TRUST_PROXY: boolean;
     STORAGE_DIR: string;
     MAX_UPLOAD_MB: number;
+    SESSION_COOKIE_SECURE?: boolean | undefined;
 };
 export declare const isProduction: boolean;
+export declare const secureCookies: boolean;
 export declare const allowedOrigins: string[];

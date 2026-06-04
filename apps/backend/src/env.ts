@@ -4,6 +4,23 @@ import path from "node:path";
 
 loadDotEnv();
 
+const booleanFromEnv = z.preprocess((value) => {
+  if (typeof value !== "string") return value;
+  const normalized = value.trim().toLowerCase();
+  if (["true", "1", "yes", "on"].includes(normalized)) return true;
+  if (["false", "0", "no", "off"].includes(normalized)) return false;
+  return value;
+}, z.boolean());
+
+const optionalBooleanFromEnv = z.preprocess((value) => {
+  if (value === undefined || value === "") return undefined;
+  if (typeof value !== "string") return value;
+  const normalized = value.trim().toLowerCase();
+  if (["true", "1", "yes", "on"].includes(normalized)) return true;
+  if (["false", "0", "no", "off"].includes(normalized)) return false;
+  return value;
+}, z.boolean().optional());
+
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
@@ -15,7 +32,8 @@ const envSchema = z.object({
   COOKIE_SECRET: z.string().min(32),
   SESSION_COOKIE_NAME: z.string().min(1).default("vyntra_session"),
   SESSION_TTL_DAYS: z.coerce.number().int().min(1).max(365).default(30),
-  TRUST_PROXY: z.coerce.boolean().default(true),
+  SESSION_COOKIE_SECURE: optionalBooleanFromEnv,
+  TRUST_PROXY: booleanFromEnv.default(true),
   STORAGE_DIR: z.string().min(1).default("/app/uploads"),
   MAX_UPLOAD_MB: z.coerce.number().int().min(1).max(100).default(30)
 });
@@ -23,6 +41,8 @@ const envSchema = z.object({
 export const env = envSchema.parse(process.env);
 
 export const isProduction = env.NODE_ENV === "production";
+
+export const secureCookies = env.SESSION_COOKIE_SECURE ?? isProduction;
 
 export const allowedOrigins = env.FRONTEND_ORIGIN.split(",")
   .map((origin) => origin.trim())

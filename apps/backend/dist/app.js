@@ -6,7 +6,7 @@ import multipart from "@fastify/multipart";
 import { PrismaClient } from "@prisma/client";
 import { Redis } from "ioredis";
 import { Server as SocketServer } from "socket.io";
-import { allowedOrigins, env, isProduction } from "./env.js";
+import { allowedOrigins, env, secureCookies } from "./env.js";
 import "./types.js";
 import { assertCsrf, hydrateAuth } from "./lib/auth.js";
 import { sendError } from "./lib/errors.js";
@@ -72,7 +72,7 @@ export async function buildApp() {
         ok: true,
         name: env.PUBLIC_APP_NAME,
         environment: env.NODE_ENV,
-        secureCookies: isProduction
+        secureCookies
     }));
     await registerAuthRoutes(app);
     await registerDashboardRoutes(app);

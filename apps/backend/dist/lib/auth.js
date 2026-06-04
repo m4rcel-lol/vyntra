@@ -1,4 +1,4 @@
-import { env, isProduction } from "../env.js";
+import { env, secureCookies } from "../env.js";
 import { constantTimeEqual, createCsrfToken, createSessionToken, hashIp, sha256 } from "./crypto.js";
 import { fail } from "./errors.js";
 import { getClientIp } from "./http.js";
@@ -7,7 +7,7 @@ function sessionCookieOptions(expires) {
     return {
         httpOnly: true,
         sameSite: "lax",
-        secure: isProduction,
+        secure: secureCookies,
         path: "/",
         ...(expires ? { expires } : {})
     };
@@ -38,7 +38,7 @@ export function clearSessionCookie(reply) {
         path: "/",
         httpOnly: true,
         sameSite: "lax",
-        secure: isProduction
+        secure: secureCookies
     });
 }
 export async function hydrateAuth(request) {
