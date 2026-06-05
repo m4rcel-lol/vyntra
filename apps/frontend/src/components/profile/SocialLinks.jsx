@@ -12,15 +12,24 @@ const styleClasses = {
   minimal: 'bg-secondary/40 hover:bg-secondary/70',
 };
 
+const LinkIcon = ({ link, className }) => (
+  link.iconUrl ? (
+    <img src={link.iconUrl} alt="" className={cn('rounded-md object-cover', className)} loading="lazy" />
+  ) : (
+    <Icon name={link.icon} className={className} />
+  )
+);
+
 // Full-width link pills (default) or compact icon row.
 export const SocialLinks = ({ links = [], accent = '0 0% 100%', variant = 'list', className }) => {
-  if (!links.length) return null;
+  const visibleLinks = links.filter((link) => link?.isVisible !== false);
+  if (!visibleLinks.length) return null;
 
   if (variant === 'icons') {
     return (
       <TooltipProvider delayDuration={120}>
         <div className={cn('flex flex-wrap items-center justify-center gap-2', className)}>
-          {links.map((l) => (
+          {visibleLinks.map((l) => (
             <Tooltip key={l.id}>
               <TooltipTrigger asChild>
                 <a
@@ -33,7 +42,7 @@ export const SocialLinks = ({ links = [], accent = '0 0% 100%', variant = 'list'
                   title={l.label}
                   onClick={() => profileService.recordLinkClick(l.id).catch(() => {})}
                 >
-                  <Icon name={l.icon} className="h-5 w-5" />
+                  <LinkIcon link={l} className="h-5 w-5" />
                 </a>
               </TooltipTrigger>
               <TooltipContent>{l.label}</TooltipContent>
@@ -46,7 +55,7 @@ export const SocialLinks = ({ links = [], accent = '0 0% 100%', variant = 'list'
 
   return (
     <div className={cn('flex flex-col gap-2.5', className)}>
-      {links.map((l, i) => (
+      {visibleLinks.map((l, i) => (
         <motion.a
           key={l.id}
           href={l.url}
@@ -66,7 +75,7 @@ export const SocialLinks = ({ links = [], accent = '0 0% 100%', variant = 'list'
           onMouseLeave={(e) => { if (l.style === 'glass') e.currentTarget.style.boxShadow = `inset 0 0 0 1px hsl(${accent} / 0.04)`; }}
           onClick={() => profileService.recordLinkClick(l.id).catch(() => {})}
         >
-          <Icon name={l.icon} className="h-5 w-5 shrink-0" />
+          <LinkIcon link={l} className="h-5 w-5 shrink-0" />
           <span className="flex-1 truncate text-left">{l.label}</span>
           <ArrowUpRight className="h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100" />
         </motion.a>

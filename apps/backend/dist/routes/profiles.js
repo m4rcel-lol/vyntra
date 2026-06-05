@@ -3,7 +3,6 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { secureCookies } from "../env.js";
 import { requireUser } from "../lib/auth.js";
-import { assertUserBadgeIsAllowed } from "../lib/badge-policy.js";
 import { sanitizeCustomCss } from "../lib/css.js";
 import { hashIp, hashVisitor } from "../lib/crypto.js";
 import { fail } from "../lib/errors.js";
@@ -54,13 +53,6 @@ const linkCreateSchema = z.object({
 const linkUpdateSchema = linkCreateSchema.partial();
 const reorderSchema = z.object({
     ids: z.array(z.string().cuid()).min(1).max(100)
-});
-const customBadgeSchema = z.object({
-    name: z.string().trim().min(1).max(32),
-    tooltip: z.string().trim().max(120).default(""),
-    color: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#d4d4d4"),
-    glowColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#ffffff"),
-    iconFileId: z.string().cuid().nullable().optional()
 });
 export async function registerProfileRoutes(app) {
     app.get("/api/profiles/me", async (request) => {
@@ -388,28 +380,8 @@ export async function registerProfileRoutes(app) {
         };
     });
     app.post("/api/badges/custom", async (request) => {
-        const user = requireUser(request);
-        if (!user.profileId)
-            fail(404, "PROFILE_NOT_FOUND", "Profile was not found");
-        const body = customBadgeSchema.parse(request.body);
-        assertUserBadgeIsAllowed({ name: body.name, tooltip: body.tooltip });
-        if (body.iconFileId)
-            await assertOwnedFile(app, user.id, body.iconFileId);
-        const badge = await app.prisma.badge.create({
-            data: {
-                ownerUserId: user.id,
-                slug: `custom-${user.id}-${Date.now()}`,
-                name: body.name,
-                tooltip: body.tooltip,
-                color: body.color,
-                glowColor: body.glowColor,
-                iconFileId: body.iconFileId ?? null
-            }
-        });
-        await app.prisma.userBadge.create({
-            data: { profileId: user.profileId, badgeId: badge.id, assignedById: user.id }
-        });
-        return { badge };
+        requireUser(request);
+        fail(410, "CUSTOM_BADGES_DISABLED", "Custom badge creation is disabled. Badges are managed by staff.");
     });
 }
 function profileInclude(visibleOnly) {

@@ -23,14 +23,14 @@ const globalBadges = [
   ["gamer", "Gamer", "#818cf8", "#818cf8", "Gaming profile"],
   ["partner", "Partner", "#2dd4bf", "#2dd4bf", "Community partner"],
   ["contributor", "Contributor", "#c084fc", "#c084fc", "Contributed to Vyntra.bio"],
-  ["unlimited", "Unlimited", "#d4d4d4", "#ffffff", "All features unlocked for free"],
-  ["custom-badge", "Custom Badge", "#f0abfc", "#f0abfc", "User-created badge support"]
+  ["unlimited", "Unlimited", "#d4d4d4", "#ffffff", "All features unlocked for free"]
 ] as const;
 
 const reserved = [
   "admin",
   "api",
   "assets",
+  "blog",
   "dashboard",
   "editor",
   "explore",
@@ -229,6 +229,8 @@ async function main() {
     });
   }
 
+  await prisma.badge.deleteMany({ where: { slug: "custom-badge" } });
+
   for (const name of reserved) {
     await prisma.reservedUsername.upsert({
       where: { normalized: name },
@@ -282,6 +284,38 @@ async function main() {
       body: "Every customization, badge, template, and analytics feature is available for free."
     }
   });
+
+  const existingWelcomePost = await prisma.blogPost.findUnique({
+    where: { slug: "welcome-to-vyntra" },
+    select: { id: true }
+  });
+  if (!existingWelcomePost) {
+    await prisma.blogPost.create({
+      data: {
+        authorUserId: admin.id,
+        slug: "welcome-to-vyntra",
+        title: "Welcome to Vyntra.bio",
+        excerpt: "What the self-hosted Vyntra.bio blog is for, and how staff can use it for updates.",
+        contentMarkdown: `# Welcome to Vyntra.bio
+
+This blog is the public update feed for your self-hosted Vyntra instance.
+
+Staff and owners can publish posts, pin important announcements, and write in **Markdown**. Users can like posts when they are logged in.
+
+## What to post here
+
+- Product updates and changelogs
+- Community announcements
+- Self-hosting notes
+- Moderation and safety updates
+
+> Keep posts clear, useful, and easy to scan.`,
+        isPublished: true,
+        isPinned: true,
+        publishedAt: new Date()
+      }
+    });
+  }
 
   console.log(`Seeded admin user: ${admin.username}`);
 }

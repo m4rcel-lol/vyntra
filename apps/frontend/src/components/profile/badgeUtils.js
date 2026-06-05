@@ -11,5 +11,5 @@ export function getBadgeBySlug(badges = [], slug) {
 }
 
 export function withoutInlineBadges(badges = []) {
-  return badges.filter((badge) => !badgeHasSlug(badge, 'verified'));
+  return badges.filter((badge) => !badgeHasSlug(badge, 'verified') && !badgeHasSlug(badge, 'staff'));
 }

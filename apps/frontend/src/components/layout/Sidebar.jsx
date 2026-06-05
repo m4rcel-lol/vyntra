@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
   LayoutDashboard, PenTool, LayoutTemplate, BarChart3, Settings,
-  ShieldCheck, ChevronLeft, LogOut, ExternalLink, Sparkles, FolderOpen, Trophy,
+  ShieldCheck, ChevronLeft, LogOut, ExternalLink, Sparkles, FolderOpen, Trophy, Newspaper,
 } from 'lucide-react';
 import { Logo } from '@/components/common/Logo';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,7 @@ export const NAV_ITEMS = [
   { to: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
   { to: '/dashboard/files', label: 'Files', icon: FolderOpen },
   { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
+  { to: '/blog', label: 'Blog', icon: Newspaper },
   { to: '/dashboard/settings', label: 'Settings', icon: Settings },
   { to: '/admin', label: 'Admin', icon: ShieldCheck, adminOnly: true },
 ];

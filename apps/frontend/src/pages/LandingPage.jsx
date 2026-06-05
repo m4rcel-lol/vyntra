@@ -29,7 +29,7 @@ const FEATURES = [
   { icon: Wand2, title: 'Living effects', desc: 'Particles, snow, rain, stars, glow borders, cursor trails and a click-to-enter intro.' },
   { icon: Music, title: 'Background audio', desc: 'Set a signature track with a frosted player. Never autoplays without consent.' },
   { icon: BarChart3, title: 'Real-time analytics', desc: 'Views, clicks, countries and devices in a clean, glassy dashboard.' },
-  { icon: Shield, title: 'Unlimited badges', desc: 'Create custom badges, use global badges, and style every glow without locked tiers.' },
+  { icon: Shield, title: 'Trusted badges', desc: 'Use global, verified, role, and Unlimited badges with polished icon, color, and glow styling.' },
 ];
 
 const STEPS = [

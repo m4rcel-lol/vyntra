@@ -14,6 +14,7 @@ import { ensureStorageDir } from "./lib/storage.js";
 import { registerAdminRoutes } from "./routes/admin.js";
 import { registerAnalyticsRoutes } from "./routes/analytics.js";
 import { registerAuthRoutes } from "./routes/auth.js";
+import { registerBlogRoutes } from "./routes/blog.js";
 import { registerDashboardRoutes } from "./routes/dashboard.js";
 import { registerFileRoutes } from "./routes/files.js";
 import { registerProfileRoutes } from "./routes/profiles.js";
@@ -85,6 +86,7 @@ export async function buildApp() {
   }));
 
   await registerAuthRoutes(app);
+  await registerBlogRoutes(app);
   await registerDashboardRoutes(app);
   await registerProfileRoutes(app);
   await registerFileRoutes(app);

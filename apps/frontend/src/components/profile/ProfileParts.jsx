@@ -1,4 +1,4 @@
-import { MapPin, CalendarDays, Hash, Eye, BadgeCheck } from 'lucide-react';
+import { MapPin, CalendarDays, Hash, Eye, BadgeCheck, ShieldCheck } from 'lucide-react';
 import { formatDate, formatNumber } from '@/utils/format';
 import { cn } from '@/lib/utils';
 import { getBadgeBySlug } from './badgeUtils';
@@ -29,6 +29,7 @@ export const ProfileIdentity = ({ profile, align = 'center', className }) => {
 
 export const ProfileUsername = ({ profile, align = 'center', className, muted = true, as: Component = 'p' }) => {
   const verifiedBadge = getBadgeBySlug(profile.badges, 'verified');
+  const staffBadge = getBadgeBySlug(profile.badges, 'staff');
   return (
     <Component
       className={cn(
@@ -44,6 +45,13 @@ export const ProfileUsername = ({ profile, align = 'center', className, muted = 
           className="h-4 w-4 shrink-0 text-sky-300"
           aria-label="Verified"
           title={verifiedBadge.tooltip || verifiedBadge.label || 'Verified'}
+        />
+      )}
+      {staffBadge && (
+        <ShieldCheck
+          className="h-4 w-4 shrink-0 text-zinc-100"
+          aria-label="Staff"
+          title={staffBadge.tooltip || staffBadge.label || 'Staff'}
         />
       )}
     </Component>

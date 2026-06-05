@@ -190,6 +190,56 @@ export const templateApi = {
   },
 };
 
+export const blogApi = {
+  async list() {
+    const result = await api('/api/blog');
+    return {
+      posts: (result.posts ?? []).map(mapBlogPost),
+      canManage: !!result.canManage,
+    };
+  },
+
+  async get(slug) {
+    const result = await api(`/api/blog/${encodeURIComponent(slug)}`);
+    return {
+      post: mapBlogPost(result.post),
+      canManage: !!result.canManage,
+    };
+  },
+
+  async create(payload) {
+    const result = await api('/api/blog', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return mapBlogPost(result.post);
+  },
+
+  async update(id, payload) {
+    const result = await api(`/api/blog/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+    return mapBlogPost(result.post);
+  },
+
+  async remove(id) {
+    return api(`/api/blog/${id}`, { method: 'DELETE' });
+  },
+
+  async toggleLike(id) {
+    return api(`/api/blog/${id}/like`, { method: 'POST' });
+  },
+
+  async pin(id, isPinned) {
+    const result = await api(`/api/blog/${id}/pin`, {
+      method: 'POST',
+      body: JSON.stringify({ isPinned }),
+    });
+    return mapBlogPost(result.post);
+  },
+};
+
 export const filesApi = {
   async list() {
     const result = await api('/api/files');
@@ -530,12 +580,16 @@ function profileToEmbeds(profile) {
 
 function mapLink(link) {
   const kind = String(link.kind || 'website').toLowerCase();
+  const style = typeof link.style === 'string' ? link.style : asObject(link.style).style;
+  const label = link.label || link.title || 'Link';
   return {
     id: link.id,
-    label: link.title || 'Link',
+    label,
+    title: label,
     url: link.url,
-    icon: kindToIcon(kind, link.title),
-    style: asObject(link.style).style || 'glass',
+    icon: link.iconName || kindToIcon(kind, label),
+    iconUrl: link.icon?.url || link.iconUrl || '',
+    style: style || 'glass',
     clicks: link.clickCount ?? 0,
     isVisible: link.isVisible !== false,
   };
@@ -623,6 +677,31 @@ function mapTemplate(template) {
     likes: template.likeCount ?? 0,
     tags: template.tags ?? [template.style || 'dark'],
     description: template.description,
+  };
+}
+
+function mapBlogPost(post) {
+  const authorUsername = post.author?.username || 'staff';
+  return {
+    id: post.id,
+    slug: post.slug,
+    title: post.title || 'Untitled post',
+    excerpt: post.excerpt || '',
+    contentMarkdown: post.contentMarkdown || '',
+    isPublished: post.isPublished !== false,
+    isPinned: !!post.isPinned,
+    likeCount: post.likeCount ?? 0,
+    likedByMe: !!post.likedByMe,
+    publishedAt: post.publishedAt || post.createdAt,
+    createdAt: post.createdAt,
+    updatedAt: post.updatedAt,
+    author: {
+      id: post.author?.id || authorUsername,
+      username: authorUsername,
+      role: String(post.author?.role || 'ADMIN').toLowerCase(),
+      displayName: post.author?.displayName || authorUsername,
+      avatar: post.author?.avatar?.url || fallbackAvatar(authorUsername),
+    },
   };
 }
 

@@ -78,7 +78,7 @@ export const MinimalLayout = ({ profile }) => (
     <ProfileUsername profile={profile} />
     {profile.bio && <p className="mt-3 max-w-xs text-sm text-foreground/75">{profile.bio}</p>}
     <BadgeRow badges={profile.badges} className="mt-4" size="sm" />
-    <SocialLinks links={profile.links} accent={profile.accent} variant="icons" className="mt-6" />
+    <SocialLinks links={profile.links} accent={profile.accent} className="mt-6 w-full" />
     <ProfileMeta profile={profile} className="mt-6" />
   </Reveal>
 );

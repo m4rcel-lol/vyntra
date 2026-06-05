@@ -29,7 +29,7 @@ const perkGroups = [
   {
     title: 'Badges and identity',
     icon: BadgeCheck,
-    perks: ['Global badges', 'Custom user-created badges', 'Verified and Unlimited badge support', 'Badge colors, glow colors, icons, and tooltips'],
+    perks: ['Global staff-managed badges', 'Automatic Owner, Staff, and Moderator role badges', 'Verified and Unlimited badge support', 'Badge colors, glow colors, icons, and tooltips'],
   },
   {
     title: 'Templates',

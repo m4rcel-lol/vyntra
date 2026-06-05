@@ -17,6 +17,8 @@ const PublicProfilePage = lazy(() => import('@/pages/PublicProfilePage'));
 const FilesPage = lazy(() => import('@/pages/FilesPage'));
 const LeaderboardPage = lazy(() => import('@/pages/LeaderboardPage'));
 const PerksPage = lazy(() => import('@/pages/PerksPage'));
+const BlogPage = lazy(() => import('@/pages/BlogPage'));
+const BlogPostPage = lazy(() => import('@/pages/BlogPostPage'));
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -48,6 +50,8 @@ export const AppRoutes = () => {
           <Route path="/u/:username" element={<PublicProfilePage />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/perks" element={<PerksPage />} />
+          <Route path="/blog" element={<BlogPage />} />
+          <Route path="/blog/:slug" element={<BlogPostPage />} />
           <Route path="/explore" element={<TemplatesPage publicView />} />
 
           <Route path="/dashboard" element={<Protected><DashboardPage /></Protected>} />
