@@ -113,7 +113,7 @@ export default function BlogPostPage() {
         </div>
       </header>
 
-      <main className="px-6 py-12 sm:py-18">
+      <main className="px-4 py-12 sm:px-6 sm:py-20">
         <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.13),transparent_34%)]" />
         <article className="mx-auto max-w-3xl">
           <div className="flex flex-wrap items-center gap-2">

@@ -108,7 +108,10 @@ export default function RegisterPage() {
 
         <label className="flex cursor-pointer items-start gap-2 text-sm text-muted-foreground">
           <Checkbox className="mt-0.5" checked={watch('terms')} onCheckedChange={(v) => setValue('terms', !!v, { shouldValidate: true })} data-testid="register-terms" />
-          <span>I agree to the <a href="#" className="text-foreground hover:underline">Terms</a> and <a href="#" className="text-foreground hover:underline">Privacy Policy</a>.</span>
+          <span>
+            I agree to the <Link to="/terms" className="text-foreground hover:underline">Terms</Link> and{' '}
+            <Link to="/privacy" className="text-foreground hover:underline">Privacy Policy</Link>.
+          </span>
         </label>
         {errors.terms && <p className="-mt-3 text-xs text-destructive">{errors.terms.message}</p>}
 

@@ -41,7 +41,13 @@ export const PublicProfileRenderer = ({ profile, preview = false, forceEntered =
         )}
       </AnimatePresence>
 
-      <div className={cn('relative z-10 flex w-full items-center justify-center px-4', preview ? 'min-h-full py-10' : 'min-h-screen py-16')}>
+      <div
+        className={cn(
+          'relative z-10 flex w-full items-center justify-center px-3 sm:px-4',
+          preview ? 'min-h-full py-8 sm:py-10' : 'min-h-screen py-12',
+          !preview && profile.music?.enabled && profile.music?.src ? 'pb-36 sm:pb-16' : ''
+        )}
+      >
         {entered && <MinimalLayout profile={profile} />}
       </div>
 
@@ -50,7 +56,11 @@ export const PublicProfileRenderer = ({ profile, preview = false, forceEntered =
           music={profile.music}
           accent={profile.accent}
           autoStart={viaClick}
-          className="absolute bottom-3 left-1/2 z-20 -translate-x-1/2 sm:bottom-4 sm:left-4 sm:translate-x-0"
+          className={cn(
+            preview
+              ? 'absolute bottom-3 left-1/2 z-20 -translate-x-1/2'
+              : 'fixed bottom-3 left-1/2 z-20 -translate-x-1/2 sm:absolute sm:bottom-4 sm:left-4 sm:translate-x-0'
+          )}
         />
       )}
 

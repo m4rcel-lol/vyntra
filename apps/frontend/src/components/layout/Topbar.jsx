@@ -71,19 +71,19 @@ export const Topbar = ({ title }) => {
   }, [data]);
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-background/70 px-4 backdrop-blur-xl sm:px-6">
-      <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileNav(true)} aria-label="Open navigation" data-testid="topbar-menu">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-background/82 px-3 backdrop-blur-xl sm:h-16 sm:gap-3 sm:px-6">
+      <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 lg:hidden" onClick={() => setMobileNav(true)} aria-label="Open navigation" data-testid="topbar-menu">
         <Menu className="h-5 w-5" />
       </Button>
 
-      <h1 className="font-display text-lg font-semibold tracking-tight">{title}</h1>
+      <h1 className="min-w-0 truncate font-display text-base font-semibold tracking-tight sm:text-lg">{title}</h1>
 
       <div className="relative ml-auto hidden w-64 md:block">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input placeholder="Search…" className="h-9 pl-9" />
       </div>
 
-      <Button variant="outline" size="sm" className="hidden sm:inline-flex" onClick={() => navigate(`/u/${user.username}`)}>
+      <Button variant="outline" size="sm" className="hidden shrink-0 sm:inline-flex" onClick={() => navigate(`/u/${user.username}`)}>
         <ExternalLink className="h-3.5 w-3.5" /> View profile
       </Button>
 
@@ -94,7 +94,7 @@ export const Topbar = ({ title }) => {
             {notifications.length > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-foreground" />}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-80">
+        <DropdownMenuContent align="end" className="mr-2 w-[calc(100vw-1rem)] max-w-80 sm:mr-0">
           <DropdownMenuLabel className="flex items-center justify-between">
             <span>Notifications</span>
             {notifications.length > 0 && <span className="text-xs font-normal text-muted-foreground">{notifications.length}</span>}
@@ -125,7 +125,7 @@ export const Topbar = ({ title }) => {
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-2 rounded-full p-0.5 pr-1 transition-colors hover:bg-secondary/50" data-testid="topbar-user">
+          <button className="flex shrink-0 items-center gap-2 rounded-full p-0.5 transition-colors hover:bg-secondary/50 sm:pr-1" data-testid="topbar-user">
             <img src={user.avatar} alt={user.displayName} className="h-8 w-8 rounded-full object-cover" />
           </button>
         </DropdownMenuTrigger>

@@ -19,6 +19,7 @@ const LeaderboardPage = lazy(() => import('@/pages/LeaderboardPage'));
 const PerksPage = lazy(() => import('@/pages/PerksPage'));
 const BlogPage = lazy(() => import('@/pages/BlogPage'));
 const BlogPostPage = lazy(() => import('@/pages/BlogPostPage'));
+const InfoPage = lazy(() => import('@/pages/InfoPage'));
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -53,6 +54,21 @@ export const AppRoutes = () => {
           <Route path="/blog" element={<BlogPage />} />
           <Route path="/blog/:slug" element={<BlogPostPage />} />
           <Route path="/explore" element={<TemplatesPage publicView />} />
+          <Route path="/features" element={<InfoPage page="features" />} />
+          <Route path="/showcase" element={<InfoPage page="showcase" />} />
+          <Route path="/changelog" element={<InfoPage page="changelog" />} />
+          <Route path="/verified" element={<InfoPage page="verified" />} />
+          <Route path="/badges" element={<InfoPage page="badges" />} />
+          <Route path="/api-info" element={<InfoPage page="api" />} />
+          <Route path="/about" element={<InfoPage page="about" />} />
+          <Route path="/careers" element={<InfoPage page="careers" />} />
+          <Route path="/press" element={<InfoPage page="press" />} />
+          <Route path="/contact" element={<InfoPage page="contact" />} />
+          <Route path="/privacy" element={<InfoPage page="privacy" />} />
+          <Route path="/terms" element={<InfoPage page="terms" />} />
+          <Route path="/cookies" element={<InfoPage page="cookies" />} />
+          <Route path="/guidelines" element={<InfoPage page="guidelines" />} />
+          <Route path="/status" element={<InfoPage page="status" />} />
 
           <Route path="/dashboard" element={<Protected><DashboardPage /></Protected>} />
           <Route path="/dashboard/editor" element={<Protected><EditorPage /></Protected>} />

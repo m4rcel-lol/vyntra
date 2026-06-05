@@ -91,22 +91,22 @@ export default function DashboardPage() {
     <DashboardLayout title="Dashboard">
       {/* Greeting */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="font-display text-2xl font-semibold tracking-tight">
+        <div className="min-w-0">
+          <h2 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
             Welcome back, {(currentUser.displayName || currentUser.username).split(' ')[0]}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Here is how <span className="text-foreground">vyntra.bio/{currentUser.username}</span> is performing.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={share} data-testid="dash-share"><Share2 className="h-4 w-4" /> Share</Button>
-          <Button onClick={() => navigate('/dashboard/editor')} data-testid="dash-edit"><PenTool className="h-4 w-4" /> Edit profile</Button>
+        <div className="grid grid-cols-2 gap-2 sm:flex">
+          <Button variant="outline" onClick={share} data-testid="dash-share" className="w-full sm:w-auto"><Share2 className="h-4 w-4" /> Share</Button>
+          <Button onClick={() => navigate('/dashboard/editor')} data-testid="dash-edit" className="w-full sm:w-auto"><PenTool className="h-4 w-4" /> Edit</Button>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatCard icon={Eye} label="Total views" value={isLoading ? '...' : formatNumber(analyticsTotals.views)} delta={analyticsTotals.viewsDelta} />
         <StatCard icon={Users} label="Unique visitors" value={isLoading ? '...' : formatNumber(analyticsTotals.uniqueVisitors)} delta={analyticsTotals.visitorsDelta} />
         <StatCard icon={MousePointerClick} label="Link clicks" value={isLoading ? '...' : formatNumber(analyticsTotals.linkClicks)} delta={analyticsTotals.clicksDelta} />
@@ -117,13 +117,13 @@ export default function DashboardPage() {
         {/* Left column */}
         <div className="space-y-6 lg:col-span-2">
           {/* Views chart */}
-          <GlassCard className="p-6">
-            <div className="flex items-center justify-between">
+          <GlassCard className="p-4 sm:p-6">
+            <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="font-display text-lg font-semibold">Profile views</h3>
                 <p className="text-sm text-muted-foreground">Last 14 days</p>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard/analytics')}>
+              <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard/analytics')} className="shrink-0 px-2 sm:px-3">
                 View all <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
@@ -146,7 +146,7 @@ export default function DashboardPage() {
 
           {/* Recent link clicks + activity */}
           <div className="grid gap-6 md:grid-cols-2">
-            <GlassCard className="p-6">
+            <GlassCard className="p-4 sm:p-6">
               <h3 className="font-display text-lg font-semibold">Top links</h3>
               <p className="text-sm text-muted-foreground">Most clicked in the last 30 days</p>
               <ul className="mt-4 space-y-3">
@@ -162,7 +162,7 @@ export default function DashboardPage() {
               </ul>
             </GlassCard>
 
-            <GlassCard className="p-6">
+            <GlassCard className="p-4 sm:p-6">
               <h3 className="font-display text-lg font-semibold">Recent activity</h3>
               <p className="text-sm text-muted-foreground">What is happening</p>
               <ul className="mt-4 space-y-4">
@@ -196,9 +196,9 @@ export default function DashboardPage() {
         {/* Right column */}
         <div className="space-y-6">
           {/* Profile preview */}
-          <GlassCard className="flex flex-col items-center p-6">
+          <GlassCard className="flex flex-col items-center p-4 sm:p-6">
             <h3 className="self-start font-display text-lg font-semibold">Your public profile</h3>
-            <div className="mt-4 h-[520px] w-full overflow-hidden rounded-2xl border border-border bg-background shadow-soft">
+            <div className="mt-4 h-[420px] w-full overflow-hidden rounded-2xl border border-border bg-background shadow-soft sm:h-[520px]">
               {currentProfile ? (
                 <PublicProfileRenderer profile={currentProfile} preview forceEntered />
               ) : (
@@ -212,7 +212,7 @@ export default function DashboardPage() {
           </GlassCard>
 
           {/* Completion checklist */}
-          <GlassCard className="p-6">
+          <GlassCard className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <h3 className="font-display text-lg font-semibold">Profile completion</h3>
               <span className="text-sm font-medium">{completion}%</span>
@@ -231,7 +231,7 @@ export default function DashboardPage() {
           </GlassCard>
 
           {/* Quick actions */}
-          <GlassCard className="p-6">
+          <GlassCard className="p-4 sm:p-6">
             <h3 className="font-display text-lg font-semibold">Quick actions</h3>
             <div className="mt-4 grid grid-cols-2 gap-2">
               {[

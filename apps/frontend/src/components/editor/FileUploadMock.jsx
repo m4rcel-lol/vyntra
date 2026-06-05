@@ -93,12 +93,12 @@ export const FileUploadMock = ({ value, onChange, label = 'Image', kind, aspect 
       </div>
       <input ref={inputRef} type="file" accept={accept} className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
       {allowUrl && (
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <div className="relative flex-1">
             <Link2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder={`Paste a ${isVideo ? 'video' : isAudio ? 'media' : 'image'} URL`} className="pl-9" />
           </div>
-          <Button type="button" variant="outline" onClick={useRemoteUrl}>Use URL</Button>
+          <Button type="button" variant="outline" onClick={useRemoteUrl} className="sm:w-auto">Use URL</Button>
         </div>
       )}
       {error && <p className="text-xs text-destructive">{error}</p>}

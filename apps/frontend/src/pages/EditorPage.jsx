@@ -58,22 +58,22 @@ export default function EditorPage() {
 
   return (
     <DashboardLayout title="Editor" fluid>
-      <div className="mb-5 flex items-center justify-between gap-3">
-        <div>
-          <h2 className="font-display text-2xl font-semibold tracking-tight">Profile editor</h2>
+      <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">Profile editor</h2>
           <p className="text-sm text-muted-foreground">Customize everything. The preview updates live.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex">
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="outline" className="xl:hidden" data-testid="mobile-preview-btn"><Eye className="h-4 w-4" /> Preview</Button>
+              <Button variant="outline" className="w-full xl:hidden" data-testid="mobile-preview-btn"><Eye className="h-4 w-4" /> Preview</Button>
             </SheetTrigger>
-            <SheetContent side="bottom" className="h-[88vh] border-border bg-card">
+            <SheetContent side="bottom" className="h-[92dvh] rounded-t-3xl border-border bg-card p-4">
               <SheetHeader><SheetTitle>Live preview</SheetTitle></SheetHeader>
-              <div className="mt-4 h-[calc(88vh-5rem)] overflow-y-auto"><LivePreview /></div>
+              <div className="mt-4 h-[calc(92dvh-5.5rem)] overflow-y-auto rounded-2xl border border-border bg-background"><LivePreview /></div>
             </SheetContent>
           </Sheet>
-          <Button onClick={save} disabled={saving || !dirty} data-testid="editor-save">
+          <Button onClick={save} disabled={saving || !dirty} data-testid="editor-save" className="w-full sm:w-auto">
             <Save className="h-4 w-4" /> {saving ? 'Saving…' : 'Save'}
           </Button>
         </div>
@@ -81,14 +81,14 @@ export default function EditorPage() {
 
       <div className="grid gap-6 xl:grid-cols-[minmax(380px,440px)_1fr]">
         <Tabs value={editorTab} onValueChange={setEditorTab} className="min-w-0">
-          <TabsList className="flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-xl bg-secondary/30 p-1 no-scrollbar">
+          <TabsList className="-mx-3 flex h-auto w-[calc(100%+1.5rem)] snap-x justify-start gap-1 overflow-x-auto rounded-none border-y border-border bg-background/80 px-3 py-2 no-scrollbar sm:mx-0 sm:w-full sm:rounded-xl sm:border sm:bg-secondary/30 sm:p-1">
             {TABS.map((t) => (
-              <TabsTrigger key={t.v} value={t.v} className="shrink-0 gap-1.5 data-[state=active]:bg-secondary" data-testid={`tab-${t.v}`}>
-                <t.icon className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{t.label}</span>
+              <TabsTrigger key={t.v} value={t.v} className="min-w-[6.25rem] shrink-0 snap-start gap-1.5 px-3 py-2 data-[state=active]:bg-secondary sm:min-w-0" data-testid={`tab-${t.v}`}>
+                <t.icon className="h-3.5 w-3.5" /> <span>{t.label}</span>
               </TabsTrigger>
             ))}
           </TabsList>
-          <div className="mt-4 rounded-2xl glass-panel border-gradient p-5">
+          <div className="mt-4 rounded-2xl glass-panel border-gradient p-4 sm:p-5">
             {TABS.map(({ v, C }) => (
               <TabsContent key={v} value={v} className="mt-0 focus-visible:outline-none">
                 <C />

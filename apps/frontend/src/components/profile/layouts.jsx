@@ -72,9 +72,9 @@ export const WideLayout = ({ profile }) => (
 
 /* ---------- Minimal ---------- */
 export const MinimalLayout = ({ profile }) => (
-  <Reveal className="flex w-full max-w-sm flex-col items-center text-center">
+  <Reveal className="flex w-full max-w-[22rem] flex-col items-center text-center sm:max-w-sm">
     <ProfileAvatar profile={profile} size={84} />
-    <h1 className="mt-5 font-display text-3xl font-semibold tracking-tight">{profile.displayName}</h1>
+    <h1 className="mt-5 max-w-full break-words font-display text-2xl font-semibold tracking-tight sm:text-3xl">{profile.displayName}</h1>
     <ProfileUsername profile={profile} />
     {profile.bio && <p className="mt-3 max-w-xs text-sm text-foreground/75">{profile.bio}</p>}
     <BadgeRow badges={profile.badges} className="mt-4" size="sm" />

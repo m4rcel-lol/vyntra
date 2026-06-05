@@ -261,7 +261,7 @@ export default function LandingPage() {
           </Marquee>
         </div>
         <div className="mt-12 flex justify-center">
-          <Button variant="outline" onClick={() => navigate('/templates')} className="group">
+          <Button variant="outline" onClick={() => navigate('/explore')} className="group">
             Browse all templates
             <ArrowRight className="transition-transform group-hover:translate-x-0.5" />
           </Button>
@@ -417,7 +417,7 @@ export default function LandingPage() {
                 {isAuthenticated ? 'Open editor' : 'Claim your link'} <ArrowRight className="transition-transform group-hover:translate-x-0.5" />
               </Button>
               <Button size="lg" variant="outline" asChild>
-                <Link to="/templates">Explore templates</Link>
+                <Link to="/explore">Explore templates</Link>
               </Button>
             </div>
           </GlassCard>

@@ -1,4 +1,4 @@
-import { Sidebar, SidebarContent } from '@/components/layout/Sidebar';
+import { MobileBottomNav, Sidebar, SidebarContent } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { PageTransition } from '@/components/common/PageTransition';
@@ -16,17 +16,18 @@ export const DashboardLayout = ({ title, children, fluid = false }) => {
 
       {/* Mobile drawer */}
       <Sheet open={mobileNavOpen} onOpenChange={setMobileNav}>
-        <SheetContent side="left" className="w-72 border-border bg-card/95 p-0 backdrop-blur-xl">
+        <SheetContent side="left" className="w-[min(88vw,20rem)] border-border bg-card/95 p-0 backdrop-blur-xl">
           <SidebarContent onNavigate={() => setMobileNav(false)} />
         </SheetContent>
       </Sheet>
 
       <div className={cn('transition-[padding] duration-300', collapsed ? 'lg:pl-[76px]' : 'lg:pl-64')}>
         <Topbar title={title} />
-        <main className={cn('mx-auto w-full px-4 py-6 sm:px-6 lg:py-8', !fluid && 'max-w-7xl')}>
+        <main className={cn('mx-auto w-full px-3 py-5 pb-28 sm:px-6 sm:py-6 lg:py-8 lg:pb-8', !fluid && 'max-w-7xl')}>
           <PageTransition>{children}</PageTransition>
         </main>
       </div>
+      <MobileBottomNav />
     </div>
   );
 };
