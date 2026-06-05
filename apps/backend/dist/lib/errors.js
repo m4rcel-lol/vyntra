@@ -22,10 +22,15 @@ export function sendError(reply, error) {
         return;
     }
     if (error instanceof ZodError) {
+        const firstIssue = error.issues[0];
+        const field = firstIssue?.path?.join(".");
+        const message = firstIssue
+            ? `${field ? `${field}: ` : ""}${firstIssue.message}`
+            : "Request validation failed";
         void reply.status(400).send({
             error: {
                 code: "VALIDATION_ERROR",
-                message: "Request validation failed",
+                message,
                 details: error.flatten()
             }
         });

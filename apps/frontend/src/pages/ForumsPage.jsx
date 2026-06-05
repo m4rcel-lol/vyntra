@@ -25,9 +25,12 @@ export default function ForumsPage() {
   const { data: categories = [], isLoading } = useQuery({ queryKey: ['forums'], queryFn: forumsService.list });
   const firstCategoryId = categories[0]?.id || '';
   const selectedCategoryId = draft.categoryId || firstCategoryId;
+  const title = draft.title.trim();
+  const bodyMarkdown = draft.bodyMarkdown.trim();
+  const hasValidThreadDraft = Boolean(selectedCategoryId && title && bodyMarkdown);
 
   const createThread = useMutation({
-    mutationFn: () => forumsService.createThread({ ...draft, categoryId: selectedCategoryId }),
+    mutationFn: () => forumsService.createThread({ categoryId: selectedCategoryId, title, bodyMarkdown }),
     onSuccess: async (result) => {
       toast.success('Forum thread created');
       setDialogOpen(false);
@@ -67,7 +70,10 @@ export default function ForumsPage() {
                 Ask questions, share self-hosting fixes, show profile designs, and get help from the Vyntra community.
               </p>
             </div>
-            <Button onClick={() => isAuthenticated ? setDialogOpen(true) : navigate('/login', { state: { from: '/forums' } })}>
+            <Button
+              disabled={isLoading}
+              onClick={() => isAuthenticated ? setDialogOpen(true) : navigate('/login', { state: { from: '/forums' } })}
+            >
               <Plus className="h-4 w-4" /> New thread
             </Button>
           </div>
@@ -120,26 +126,48 @@ export default function ForumsPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl rounded-2xl border-border bg-card/95 backdrop-blur-xl">
           <DialogHeader><DialogTitle>Create forum thread</DialogTitle></DialogHeader>
-          <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); createThread.mutate(); }}>
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!selectedCategoryId) {
+                toast.error('Forum categories are still loading. Try again in a moment.');
+                return;
+              }
+              if (!title) {
+                toast.error('Add a title before creating the thread.');
+                return;
+              }
+              if (!bodyMarkdown) {
+                toast.error('Add a post body before creating the thread.');
+                return;
+              }
+              createThread.mutate();
+            }}
+          >
             <div className="grid gap-2">
               <Label>Category</Label>
               <select
                 value={selectedCategoryId}
                 onChange={(event) => setDraft((current) => ({ ...current, categoryId: event.target.value }))}
                 className="h-10 rounded-xl border border-border bg-secondary/40 px-3 text-sm"
+                disabled={!categories.length}
               >
                 {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
               </select>
+              {!categories.length && <p className="text-xs text-muted-foreground">Loading forum categories...</p>}
             </div>
             <div className="grid gap-2">
               <Label>Title</Label>
               <Input value={draft.title} onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))} placeholder="How do I configure Vyntra behind Caddy?" />
+              {!title && <p className="text-xs text-muted-foreground">A title is required.</p>}
             </div>
             <div className="grid gap-2">
               <Label>Markdown body</Label>
               <Textarea rows={8} value={draft.bodyMarkdown} onChange={(event) => setDraft((current) => ({ ...current, bodyMarkdown: event.target.value }))} placeholder="Describe the issue, steps, logs, and what you expected." />
+              {!bodyMarkdown && <p className="text-xs text-muted-foreground">A post body is required.</p>}
             </div>
-            <Button type="submit" disabled={createThread.isPending || !draft.title.trim() || !draft.bodyMarkdown.trim()}>
+            <Button type="submit" disabled={!hasValidThreadDraft || createThread.isPending}>
               {createThread.isPending ? 'Creating...' : 'Create thread'}
             </Button>
           </form>

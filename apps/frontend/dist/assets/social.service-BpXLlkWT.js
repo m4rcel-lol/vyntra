@@ -1,1 +1,0 @@
-import{f as e}from"./index-D3-95mY6.js";var t={myFriends:()=>e.myFriends(),publicFriends:t=>e.publicFriends(t),addFriend:t=>e.addFriend(t),removeFriend:t=>e.removeFriend(t),conversations:()=>e.conversations(),conversation:t=>e.conversation(t),sendMessage:(t,n)=>e.sendMessage(t,n)};export{t};

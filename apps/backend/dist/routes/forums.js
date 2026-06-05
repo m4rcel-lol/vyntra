@@ -32,9 +32,9 @@ const defaultCategories = [
     }
 ];
 const threadCreateSchema = z.object({
-    categoryId: z.string().cuid(),
-    title: z.string().trim().min(4).max(120),
-    bodyMarkdown: z.string().trim().min(10).max(12000)
+    categoryId: z.string().trim().optional().default(""),
+    title: z.string().trim().min(1, "Title is required").max(120, "Title must be 120 characters or less"),
+    bodyMarkdown: z.string().trim().min(1, "Post body is required").max(12000, "Post body must be 12000 characters or less")
 });
 const replySchema = z.object({
     bodyMarkdown: z.string().trim().min(1).max(8000)
@@ -80,10 +80,9 @@ export async function registerForumRoutes(app) {
     });
     app.post("/api/forums/threads", async (request) => {
         const user = requireUser(request);
+        await ensureDefaultForumCategories(app);
         const body = threadCreateSchema.parse(request.body);
-        const category = await app.prisma.forumCategory.findUnique({ where: { id: body.categoryId } });
-        if (!category)
-            fail(404, "FORUM_CATEGORY_NOT_FOUND", "Forum category was not found");
+        const category = await resolveForumCategory(app, body.categoryId);
         const thread = await app.prisma.forumThread.create({
             data: {
                 categoryId: category.id,
@@ -175,6 +174,21 @@ export async function registerForumRoutes(app) {
         app.io.to("admin").emit("forum:moderated", { actorId: actor.id, threadId: thread.id });
         return serializeThreadDetail(request, thread);
     });
+}
+async function resolveForumCategory(app, categoryId) {
+    if (categoryId) {
+        const parsed = z.string().cuid().safeParse(categoryId);
+        if (!parsed.success)
+            fail(400, "FORUM_CATEGORY_INVALID", "Choose a valid forum category");
+        const selected = await app.prisma.forumCategory.findUnique({ where: { id: parsed.data } });
+        if (selected)
+            return selected;
+        fail(404, "FORUM_CATEGORY_NOT_FOUND", "Forum category was not found");
+    }
+    const fallback = await app.prisma.forumCategory.findFirst({ orderBy: { order: "asc" } });
+    if (!fallback)
+        fail(500, "FORUM_CATEGORY_UNAVAILABLE", "Forum categories are not available");
+    return fallback;
 }
 async function ensureDefaultForumCategories(app) {
     const existing = await app.prisma.forumCategory.count();
