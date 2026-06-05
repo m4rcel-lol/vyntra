@@ -1,1 +1,0 @@
-import{p as e}from"./Logo-Dfm2F80N.js";import{s as t,st as n}from"./button-wLFVgb9r.js";var r=e(),i=({name:e,fallback:i=`Link`,...a})=>(0,r.jsx)(e&&t[e]||t[i]||n,{...a});export{i as t};
