@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   Users, Flag, Award, FileWarning, ShieldAlert, BadgeCheck, Ban, CheckCircle2,
-  KeyRound, Plus, Search, X, Eye, RotateCcw, LockKeyhole,
+  KeyRound, Plus, Search, X, Eye, RotateCcw, LockKeyhole, Headphones,
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { StatCard } from '@/components/common/StatCard';
@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { adminService } from '@/services/admin.service';
+import { supportService } from '@/services/support.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { formatDate, formatNumber } from '@/utils/format';
 import { cn } from '@/lib/utils';
@@ -50,6 +51,7 @@ export default function AdminPage() {
   const { data: users = [] } = useQuery({ queryKey: ['admin-users'], queryFn: adminService.getUsers });
   const { data: badges = [] } = useQuery({ queryKey: ['admin-badges'], queryFn: adminService.getBadges });
   const { data: reports = [] } = useQuery({ queryKey: ['admin-reports'], queryFn: adminService.getReports });
+  const { data: supportConversations = [] } = useQuery({ queryKey: ['admin-support'], queryFn: supportService.adminConversations });
 
   useEffect(() => {
     if (!selectedUserId && users.length) setSelectedUserId(users[0].id);
@@ -57,10 +59,11 @@ export default function AdminPage() {
 
   const selectedUser = users.find((user) => user.id === selectedUserId) ?? users[0] ?? null;
   const selectedIsSelf = isSelfUser(selectedUser, currentUser);
+  const currentIsOwner = String(currentUser?.role || '').toLowerCase() === 'owner';
   const verifiedBadge = badges.find((badge) => badge.slug === 'verified');
   const selectedBadgeIds = new Set(selectedUser?.badges?.map((badge) => badge.id) ?? []);
-  const assignableBadges = badges.filter((badge) => !selectedBadgeIds.has(badge.id) && !isProtectedBadge(badge));
-  const badgeFormIsProtected = isProtectedBadge(badgeForm);
+  const assignableBadges = badges.filter((badge) => !selectedBadgeIds.has(badge.id) && (currentIsOwner || !isProtectedBadge(badge)));
+  const badgeFormIsProtected = !currentIsOwner && isProtectedBadge(badgeForm);
 
   const filteredUsers = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -78,6 +81,7 @@ export default function AdminPage() {
     queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     queryClient.invalidateQueries({ queryKey: ['public-profile'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-support'] });
   };
 
   const updateUser = useMutation({
@@ -125,6 +129,24 @@ export default function AdminPage() {
       toast.success('Profile views reset');
     },
     onError: (error) => toast.error(error.message || 'Could not reset views'),
+  });
+
+  const acceptSupport = useMutation({
+    mutationFn: supportService.accept,
+    onSuccess: () => {
+      invalidateAdmin();
+      toast.success('Support chat accepted');
+    },
+    onError: (error) => toast.error(error.message || 'Could not accept support chat'),
+  });
+
+  const closeSupport = useMutation({
+    mutationFn: supportService.close,
+    onSuccess: () => {
+      invalidateAdmin();
+      toast.success('Support chat closed');
+    },
+    onError: (error) => toast.error(error.message || 'Could not close support chat'),
   });
 
   const selectedIsVerified = !!selectedUser?.badges?.some((badge) => badge.slug === 'verified');
@@ -210,6 +232,7 @@ export default function AdminPage() {
         <TabsList className="h-auto rounded-xl bg-secondary/30 p-1">
           <TabsTrigger value="users">Users & badges</TabsTrigger>
           <TabsTrigger value="badges">Global badges</TabsTrigger>
+          <TabsTrigger value="support">Support</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
         </TabsList>
 
@@ -391,11 +414,12 @@ export default function AdminPage() {
               <div className="mt-5 grid gap-3 md:grid-cols-2">
                 {badges.map((badge) => {
                   const protectedBadge = isProtectedBadge(badge);
+                  const lockedForActor = protectedBadge && !currentIsOwner;
                   return (
                   <button
                     key={badge.id}
                     onClick={() => {
-                      if (protectedBadge) return;
+                      if (lockedForActor) return;
                       setBadgeForm({
                         slug: badge.slug,
                         name: badge.name,
@@ -407,7 +431,7 @@ export default function AdminPage() {
                     }}
                     className={cn(
                       'rounded-2xl border border-border bg-secondary/20 p-4 text-left transition-colors hover:bg-secondary/40',
-                      protectedBadge && 'cursor-not-allowed opacity-75 hover:bg-secondary/20'
+                      lockedForActor && 'cursor-not-allowed opacity-75 hover:bg-secondary/20'
                     )}
                   >
                     <div className="flex items-center gap-3">
@@ -427,7 +451,7 @@ export default function AdminPage() {
                     <p className="mt-3 line-clamp-2 text-xs text-muted-foreground">{badge.tooltip || badge.description || 'No tooltip set.'}</p>
                     <p className="mt-3 text-xs text-muted-foreground">
                       {formatNumber(badge.assignmentCount)} assigned
-                      {protectedBadge ? ' · system protected' : ''}
+                      {protectedBadge ? currentIsOwner ? ' · owner editable' : ' · system protected' : ''}
                     </p>
                   </button>
                   );
@@ -435,6 +459,15 @@ export default function AdminPage() {
               </div>
             </GlassCard>
           </div>
+        </TabsContent>
+
+        <TabsContent value="support" className="mt-5">
+          <SupportQueue
+            conversations={supportConversations}
+            onAccept={(id) => acceptSupport.mutate(id)}
+            onClose={(id) => closeSupport.mutate(id)}
+            busy={acceptSupport.isPending || closeSupport.isPending}
+          />
         </TabsContent>
 
         <TabsContent value="reports" className="mt-5">
@@ -467,6 +500,65 @@ export default function AdminPage() {
         </TabsContent>
       </Tabs>
     </DashboardLayout>
+  );
+}
+
+function SupportQueue({ conversations, onAccept, onClose, busy }) {
+  return (
+    <GlassCard className="p-4 sm:p-5">
+      <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3 className="flex items-center gap-2 font-display text-lg font-semibold">
+            <Headphones className="h-4 w-4" /> Support conversations
+          </h3>
+          <p className="text-sm text-muted-foreground">Saved user chats, bot triage, and staff handoff queue.</p>
+        </div>
+        <Badge variant="outline">{conversations.length} conversations</Badge>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        {conversations.map((conversation) => (
+          <div key={conversation.id} className="rounded-2xl border border-border bg-secondary/20 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h4 className="truncate font-display text-base font-semibold">{conversation.subject}</h4>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  @{conversation.requester.username} · {formatDate(conversation.updatedAt)}
+                </p>
+              </div>
+              <Badge variant={conversation.status === 'waiting_for_staff' ? 'default' : 'outline'} className="shrink-0 capitalize">
+                {conversation.status.replaceAll('_', ' ')}
+              </Badge>
+            </div>
+
+            <div className="mt-4 max-h-64 space-y-2 overflow-y-auto rounded-xl border border-border bg-background/40 p-3">
+              {conversation.messages.map((message) => (
+                <div key={message.id} className="text-sm">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    {message.authorRole === 'bot' ? 'Vyntra Assist' : message.author?.username || message.authorRole}
+                  </p>
+                  <p className="whitespace-pre-wrap break-words text-foreground/85">{message.body}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button size="sm" disabled={busy || conversation.status === 'active' || conversation.status === 'closed'} onClick={() => onAccept(conversation.id)}>
+                Accept chat
+              </Button>
+              <Button size="sm" variant="outline" disabled={busy || conversation.status === 'closed'} onClick={() => onClose(conversation.id)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        ))}
+        {!conversations.length && (
+          <div className="rounded-2xl border border-border bg-secondary/20 p-8 text-center text-sm text-muted-foreground xl:col-span-2">
+            No support conversations yet.
+          </div>
+        )}
+      </div>
+    </GlassCard>
   );
 }
 
@@ -507,6 +599,7 @@ function UserManagementCard({
   const ownerRole = isOwnerUser(user);
   const selfTarget = isSelfUser(user, currentUser);
   const ownerProtected = isProtectedOwnerTarget(user, currentUser);
+  const currentIsOwner = String(currentUser?.role || '').toLowerCase() === 'owner';
   const roleLocked = ownerRole || selfTarget;
 
   return (
@@ -595,7 +688,7 @@ function UserManagementCard({
                 <span key={badge.id} className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary/40 px-2.5 py-1 text-xs">
                   <Icon name={badge.icon} fallback="Award" className="h-3.5 w-3.5" />
                   {badge.name}
-                  {protectedBadge || ownerProtected ? (
+              {(protectedBadge && !currentIsOwner) || ownerProtected ? (
                     <LockKeyhole className="ml-1 h-3 w-3 text-amber-300" aria-label="System protected" />
                   ) : (
                     <button onClick={() => onRemoveBadge(badge.id)} className="ml-1 text-muted-foreground transition-colors hover:text-destructive" aria-label={`Remove ${badge.name}`}>

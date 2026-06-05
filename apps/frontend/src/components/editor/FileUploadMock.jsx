@@ -15,11 +15,14 @@ export const FileUploadMock = ({ value, onChange, label = 'Image', kind, aspect 
   const hasExplicitKind = Boolean(uploadKind);
   const isVideo = hasExplicitKind ? uploadKind === 'BACKGROUND_VIDEO' : label.toLowerCase().includes('video');
   const isAudio = hasExplicitKind ? uploadKind === 'AUDIO' : label.toLowerCase().includes('audio') || label.toLowerCase().includes('music');
+  const isCursor = hasExplicitKind ? uploadKind === 'CURSOR' : label.toLowerCase().includes('cursor');
   const accept = isVideo
     ? 'video/mp4,video/webm'
     : isAudio
       ? 'audio/*'
-      : 'image/jpeg,image/png,image/webp,image/gif';
+      : isCursor
+        ? '.cur,image/png,image/gif'
+        : 'image/jpeg,image/png,image/webp,image/gif';
 
   const handleFile = async (file) => {
     if (!file) return;

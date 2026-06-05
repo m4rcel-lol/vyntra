@@ -19,7 +19,7 @@ export type CompressedSidecar = {
 };
 export declare function ensureStorageDir(): Promise<void>;
 export declare function safeFilename(name: string): string;
-export declare function detectUploadMime(buffer: Buffer): Promise<string>;
+export declare function detectUploadMime(buffer: Buffer, originalName?: string): Promise<string>;
 export declare function assertAllowedMime(kind: string, mimeType: string): void;
 export declare function assertAllowedSize(sizeBytes: number): void;
 export declare function assertCompressedSize(sizeBytes: number): void;

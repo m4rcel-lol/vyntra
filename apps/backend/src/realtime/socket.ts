@@ -26,8 +26,9 @@ export function registerRealtime(io: SocketServer, prisma: PrismaClient): void {
   });
 
   io.on("connection", (socket) => {
-    const user = socket.data.user as { username: string; role: string; profileId: string | null } | undefined;
+    const user = socket.data.user as { id: string; username: string; role: string; profileId: string | null } | undefined;
     if (user) {
+      socket.join(`user:${user.id}`);
       socket.join(`user:${user.username}`);
       socket.join(`profile:${user.username}`);
       if (user.role === "OWNER" || user.role === "ADMIN" || user.role === "MODERATOR") socket.join("admin");

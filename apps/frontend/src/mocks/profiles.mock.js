@@ -47,11 +47,8 @@ export const createDefaultProfile = (overrides = {}) => ({
   links: pickLinks(['l_x', 'l_ig', 'l_gh']),
   badges: pickBadges(['b_early']),
   music: { enabled: false, title: 'Midnight Drive', artist: 'Neon Tide', cover: WALLPAPERS.mesh1, loop: true, volume: 50, src: '' },
-  embeds: { youtube: '', twitch: '', spotify: '', soundcloud: '', discordActivity: true, portfolioCard: false },
   metadata: { title: 'Your Name · Vyntra', description: 'My links, my world.', ogImage: ABSTRACT.hero },
   advanced: { customCss: '', customCursor: '', visibility: 'public', seo: true },
-  discordActivity: { username: 'yourname', status: 'online', activity: 'Playing Vyntra', avatar: PORTRAITS.p2 },
-  spotifyActivity: { track: 'Midnight Drive', artist: 'Neon Tide', cover: WALLPAPERS.mesh1, progress: 42 },
   ...overrides,
 });
 
@@ -76,11 +73,8 @@ export const mockProfiles = {
     links: pickLinks(['l_ig', 'l_x', 'l_yt', 'l_web']),
     badges: pickBadges(['b_verified', 'b_unlimited', 'b_artist', 'b_top']),
     music: { enabled: true, title: 'Aurora', artist: 'Saint Pepsi', cover: WALLPAPERS.mesh1, loop: true, volume: 40, src: '' },
-    embeds: { youtube: 'dQw4w9WgXcQ', twitch: '', spotify: '', soundcloud: '', discordActivity: true, portfolioCard: true },
     metadata: { title: 'Nova Sterling · 3D Artist', description: 'Worlds that glow.', ogImage: ABSTRACT.fluid2 },
     advanced: { customCss: '', customCursor: '', visibility: 'public', seo: true },
-    discordActivity: { username: 'nova', status: 'dnd', activity: 'In Blender — scene_final_v9', avatar: PORTRAITS.p5 },
-    spotifyActivity: { track: 'Aurora', artist: 'Saint Pepsi', cover: WALLPAPERS.mesh1, progress: 67 },
   },
   kairo: {
     id: 'pr_kairo',
@@ -101,11 +95,8 @@ export const mockProfiles = {
     links: pickLinks(['l_tw', 'l_yt', 'l_dc', 'l_gh', 'l_x']),
     badges: pickBadges(['b_verified', 'b_dev', 'b_og']),
     music: { enabled: true, title: 'Neon Rain', artist: 'HOME', cover: WALLPAPERS.cyber3, loop: true, volume: 35, src: '' },
-    embeds: { youtube: '', twitch: 'kairo', spotify: '', soundcloud: '', discordActivity: true, portfolioCard: false },
     metadata: { title: 'Kairo · Game Dev', description: 'Pixel dreams at 3am.', ogImage: WALLPAPERS.cyber1 },
     advanced: { customCss: '', customCursor: '', visibility: 'public', seo: true },
-    discordActivity: { username: 'kairo', status: 'online', activity: 'Streaming — Rust gamedev', avatar: PORTRAITS.p6 },
-    spotifyActivity: { track: 'Neon Rain', artist: 'HOME', cover: WALLPAPERS.cyber3, progress: 28 },
   },
   lumen: {
     id: 'pr_lumen',
@@ -126,11 +117,8 @@ export const mockProfiles = {
     links: pickLinks(['l_sp', 'l_sc', 'l_yt', 'l_ig', 'l_web']),
     badges: pickBadges(['b_unlimited', 'b_early', 'b_top']),
     music: { enabled: true, title: 'Sunset Memory', artist: 'Lumen', cover: WALLPAPERS.mesh4, loop: true, volume: 55, src: '' },
-    embeds: { youtube: '', twitch: '', spotify: '37i9dQZF1DX', soundcloud: 'lumen', discordActivity: false, portfolioCard: true },
     metadata: { title: 'Lumen · Producer', description: 'Lo-fi by day, synthwave by night.', ogImage: WALLPAPERS.mesh5 },
     advanced: { customCss: '', customCursor: '', visibility: 'public', seo: true },
-    discordActivity: { username: 'lumen', status: 'idle', activity: 'In FL Studio', avatar: PORTRAITS.p1 },
-    spotifyActivity: { track: 'Sunset Memory', artist: 'Lumen', cover: WALLPAPERS.mesh4, progress: 81 },
   },
 };
 

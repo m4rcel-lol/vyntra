@@ -19,6 +19,10 @@ const LeaderboardPage = lazy(() => import('@/pages/LeaderboardPage'));
 const PerksPage = lazy(() => import('@/pages/PerksPage'));
 const BlogPage = lazy(() => import('@/pages/BlogPage'));
 const BlogPostPage = lazy(() => import('@/pages/BlogPostPage'));
+const ForumsPage = lazy(() => import('@/pages/ForumsPage'));
+const ForumThreadPage = lazy(() => import('@/pages/ForumThreadPage'));
+const MessagesPage = lazy(() => import('@/pages/MessagesPage'));
+const SupportPage = lazy(() => import('@/pages/SupportPage'));
 const InfoPage = lazy(() => import('@/pages/InfoPage'));
 
 const ScrollToTop = () => {
@@ -53,6 +57,8 @@ export const AppRoutes = () => {
           <Route path="/perks" element={<PerksPage />} />
           <Route path="/blog" element={<BlogPage />} />
           <Route path="/blog/:slug" element={<BlogPostPage />} />
+          <Route path="/forums" element={<ForumsPage />} />
+          <Route path="/forums/:slug" element={<ForumThreadPage />} />
           <Route path="/explore" element={<TemplatesPage publicView />} />
           <Route path="/features" element={<InfoPage page="features" />} />
           <Route path="/showcase" element={<InfoPage page="showcase" />} />
@@ -75,6 +81,8 @@ export const AppRoutes = () => {
           <Route path="/dashboard/templates" element={<Protected><TemplatesPage /></Protected>} />
           <Route path="/dashboard/analytics" element={<Protected><AnalyticsPage /></Protected>} />
           <Route path="/dashboard/files" element={<Protected><FilesPage /></Protected>} />
+          <Route path="/dashboard/messages" element={<Protected><MessagesPage /></Protected>} />
+          <Route path="/dashboard/support" element={<Protected><SupportPage /></Protected>} />
           <Route path="/dashboard/settings" element={<Protected><SettingsPage /></Protected>} />
           <Route path="/admin" element={<AdminOnly><AdminPage /></AdminOnly>} />
 
@@ -82,6 +90,8 @@ export const AppRoutes = () => {
           <Route path="/templates" element={<Navigate to="/dashboard/templates" replace />} />
           <Route path="/analytics" element={<Navigate to="/dashboard/analytics" replace />} />
           <Route path="/files" element={<Navigate to="/dashboard/files" replace />} />
+          <Route path="/messages" element={<Navigate to="/dashboard/messages" replace />} />
+          <Route path="/support" element={<Navigate to="/dashboard/support" replace />} />
           <Route path="/settings" element={<Navigate to="/dashboard/settings" replace />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

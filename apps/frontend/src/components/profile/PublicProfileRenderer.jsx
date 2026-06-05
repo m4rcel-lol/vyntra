@@ -7,12 +7,18 @@ import { MusicPlayer } from './MusicPlayer';
 import { MinimalLayout } from './layouts';
 import { cn } from '@/lib/utils';
 
+const cursorCssValue = (url) => {
+  const cleanUrl = String(url || '').trim().replace(/["\\\n\r]/g, '');
+  if (!cleanUrl) return undefined;
+  return `url("${cleanUrl}") 16 16, auto`;
+};
+
 /**
  * Full profile renderer used by the public page (full screen) and the editor
  * live preview (`preview`). Handles background, effects, click-to-enter intro,
  * background music and safely-simulated custom CSS / cursor.
  */
-export const PublicProfileRenderer = ({ profile, preview = false, forceEntered = false, className }) => {
+export const PublicProfileRenderer = ({ profile, preview = false, forceEntered = false, className, social }) => {
   const needIntro = !!profile.effects?.clickToEnter && !forceEntered;
   const [entered, setEntered] = useState(!needIntro);
   const [viaClick, setViaClick] = useState(false);
@@ -23,14 +29,20 @@ export const PublicProfileRenderer = ({ profile, preview = false, forceEntered =
     setViaClick(false);
   }, [needIntro, profile.id]);
 
-  const cursor = profile.advanced?.customCursor ? `url(${profile.advanced.customCursor}), auto` : undefined;
+  const cursor = cursorCssValue(profile.advanced?.customCursor);
 
   return (
     <div
       className={cn('relative isolate w-full overflow-hidden', preview ? 'h-full' : 'min-h-screen', className)}
-      style={{ cursor }}
+      style={cursor ? { '--vyntra-custom-cursor': cursor } : undefined}
+      data-vyntra-custom-cursor={cursor ? '' : undefined}
       data-testid="public-profile"
     >
+      {cursor && (
+        <style>
+          {'[data-vyntra-custom-cursor], [data-vyntra-custom-cursor] * { cursor: var(--vyntra-custom-cursor) !important; }'}
+        </style>
+      )}
       <ProfileBackground background={profile.background} />
       {/* readability vignette */}
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(120%_120%_at_50%_0%,transparent_40%,rgba(0,0,0,0.55)_100%)]" />
@@ -48,7 +60,7 @@ export const PublicProfileRenderer = ({ profile, preview = false, forceEntered =
           !preview && profile.music?.enabled && profile.music?.src ? 'pb-36 sm:pb-16' : ''
         )}
       >
-        {entered && <MinimalLayout profile={profile} />}
+        {entered && <MinimalLayout profile={profile} social={!preview ? social : null} />}
       </div>
 
       {entered && profile.music?.enabled && profile.music?.src && (

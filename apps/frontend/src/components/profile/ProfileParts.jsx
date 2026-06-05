@@ -1,4 +1,4 @@
-import { MapPin, CalendarDays, Hash, Eye, BadgeCheck, ShieldCheck } from 'lucide-react';
+import { MapPin, CalendarDays, Hash, Eye, BadgeCheck, ShieldCheck, UserPlus, Users } from 'lucide-react';
 import { formatDate, formatNumber } from '@/utils/format';
 import { cn } from '@/lib/utils';
 import { getBadgeBySlug } from './badgeUtils';
@@ -67,33 +67,40 @@ export const ProfileMeta = ({ profile, align = 'center', className }) => (
   </div>
 );
 
-export const ProfileEmbeds = ({ profile, className }) => {
-  const { embeds } = profile;
-  if (!embeds) return null;
-  const hasAny = embeds.youtube || embeds.portfolioCard;
-  if (!hasAny) return null;
+export const ProfileFriendActions = ({ social, className }) => {
+  if (!social) return null;
+  const state = social.state || 'guest';
+  const buttonLabel = state === 'accepted'
+    ? 'Friends'
+    : state === 'pending_sent'
+      ? 'Pending'
+      : state === 'pending_received'
+        ? 'Accept friend'
+        : state === 'self'
+          ? 'Your profile'
+          : 'Add friend';
+  const disabled = social.busy || state === 'pending_sent' || state === 'self' || state === 'accepted';
+
   return (
-    <div className={cn('space-y-3', className)}>
-      {embeds.youtube && (
-        <div className="overflow-hidden rounded-2xl border border-border">
-          <div className="aspect-video w-full">
-            <iframe
-              title="YouTube"
-              src={`https://www.youtube-nocookie.com/embed/${embeds.youtube}`}
-              className="h-full w-full"
-              allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              loading="lazy"
-            />
-          </div>
-        </div>
-      )}
-      {embeds.portfolioCard && (
-        <div className="rounded-2xl glass border-gradient p-4">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground">Featured work</p>
-          <p className="mt-1 font-display text-base font-semibold">Selected projects 2025</p>
-          <p className="mt-1 text-sm text-muted-foreground">A curated reel of recent commissions and personal pieces.</p>
-        </div>
+    <div className={cn('flex flex-wrap items-center justify-center gap-2', className)}>
+      <button
+        type="button"
+        onClick={social.onOpenFriends}
+        className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-foreground/80 transition-colors hover:bg-white/[0.1] hover:text-foreground"
+      >
+        <Users className="h-3.5 w-3.5" />
+        {formatNumber(social.count || 0)} friends
+      </button>
+      {state !== 'self' && (
+        <button
+          type="button"
+          onClick={state === 'accepted' ? social.onRemoveFriend : social.onAddFriend}
+          disabled={disabled}
+          className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white text-black px-3 py-1.5 text-xs font-semibold transition hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-white/20 disabled:text-white/55"
+        >
+          <UserPlus className="h-3.5 w-3.5" />
+          {buttonLabel}
+        </button>
       )}
     </div>
   );

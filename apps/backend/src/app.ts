@@ -17,8 +17,12 @@ import { registerAuthRoutes } from "./routes/auth.js";
 import { registerBlogRoutes } from "./routes/blog.js";
 import { registerDashboardRoutes } from "./routes/dashboard.js";
 import { registerFileRoutes } from "./routes/files.js";
+import { registerForumRoutes } from "./routes/forums.js";
+import { registerNotificationRoutes } from "./routes/notifications.js";
 import { registerProfileRoutes } from "./routes/profiles.js";
 import { registerReportRoutes } from "./routes/reports.js";
+import { registerSocialRoutes } from "./routes/social.js";
+import { registerSupportRoutes } from "./routes/support.js";
 import { registerTemplateRoutes } from "./routes/templates.js";
 import { registerRealtime } from "./realtime/socket.js";
 
@@ -89,6 +93,10 @@ export async function buildApp() {
   await registerBlogRoutes(app);
   await registerDashboardRoutes(app);
   await registerProfileRoutes(app);
+  await registerSocialRoutes(app);
+  await registerForumRoutes(app);
+  await registerSupportRoutes(app);
+  await registerNotificationRoutes(app);
   await registerFileRoutes(app);
   await registerTemplateRoutes(app);
   await registerAnalyticsRoutes(app);

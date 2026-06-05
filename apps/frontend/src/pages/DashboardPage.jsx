@@ -7,6 +7,7 @@ import { ChartFrame } from '@/components/common/ChartFrame';
 import {
   Eye, MousePointerClick, Users, Percent, PenTool, Share2, LayoutTemplate,
   BarChart3, Sparkles, Check, ArrowRight,
+  UserRoundPlus,
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { GlassCard } from '@/components/common/GlassCard';
@@ -106,11 +107,12 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats */}
-      <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
         <StatCard icon={Eye} label="Total views" value={isLoading ? '...' : formatNumber(analyticsTotals.views)} delta={analyticsTotals.viewsDelta} />
         <StatCard icon={Users} label="Unique visitors" value={isLoading ? '...' : formatNumber(analyticsTotals.uniqueVisitors)} delta={analyticsTotals.visitorsDelta} />
         <StatCard icon={MousePointerClick} label="Link clicks" value={isLoading ? '...' : formatNumber(analyticsTotals.linkClicks)} delta={analyticsTotals.clicksDelta} />
         <StatCard icon={Percent} label="Click-through rate" value={analyticsTotals.ctr} suffix="%" delta={analyticsTotals.ctrDelta} />
+        <StatCard icon={UserRoundPlus} label="Friends" value={isLoading ? '...' : formatNumber(data?.dashboard?.stats?.friends ?? 0)} />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">

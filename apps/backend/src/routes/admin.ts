@@ -163,7 +163,7 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
   app.post("/api/admin/badges", async (request) => {
     const actor = requireRole(request, ["ADMIN"]);
     const body = globalBadgeSchema.parse(request.body);
-    assertBadgeIsNotProtected(body.slug);
+    assertBadgeIsNotProtected(body.slug, actor.role);
     const badge = await app.prisma.badge.upsert({
       where: { slug: body.slug },
       create: {
@@ -202,7 +202,7 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
     ]);
     if (!profile || !badge) fail(404, "NOT_FOUND", "Profile or badge was not found");
     assertOwnerTargetAllowed(profile.user.role, profile.user.id, actor.id);
-    assertBadgeIsNotProtected(badge.slug);
+    assertBadgeIsNotProtected(badge.slug, actor.role);
     const userBadge = await app.prisma.userBadge.upsert({
       where: { profileId_badgeId: { profileId: profile.id, badgeId: badge.id } },
       create: { profileId: profile.id, badgeId: badge.id, assignedById: actor.id },
@@ -228,7 +228,7 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
     if (!profile) fail(404, "PROFILE_NOT_FOUND", "Profile was not found");
     if (!badge) fail(404, "BADGE_NOT_FOUND", "Badge was not found");
     assertOwnerTargetAllowed(profile.user.role, profile.user.id, actor.id);
-    assertBadgeIsNotProtected(badge.slug);
+    assertBadgeIsNotProtected(badge.slug, actor.role);
     await app.prisma.userBadge.deleteMany({
       where: {
         profileId: params.profileId,
@@ -470,8 +470,8 @@ function assertRolePatchAllowed(params: {
   }
 }
 
-function assertBadgeIsNotProtected(slug: string): void {
-  if (isRoleBadgeSlug(slug)) {
+function assertBadgeIsNotProtected(slug: string, actorRole: UserRole): void {
+  if (actorRole !== "OWNER" && isRoleBadgeSlug(slug)) {
     fail(403, "BADGE_PROTECTED", "Role badges are managed by the system and cannot be changed from the admin panel");
   }
 }

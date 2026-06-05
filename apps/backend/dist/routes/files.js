@@ -26,7 +26,7 @@ export async function registerFileRoutes(app) {
             fail(400, "NO_FILE", "No file was uploaded");
         const buffer = await file.toBuffer();
         assertAllowedSize(buffer.byteLength);
-        const verifiedMime = await detectUploadMime(buffer);
+        const verifiedMime = await detectUploadMime(buffer, file.filename);
         assertAllowedMime(query.kind, verifiedMime);
         const compressed = await compressUpload({
             kind: query.kind,

@@ -1,0 +1,1 @@
+import{a as e}from"./index-BVS9A1Ld.js";var t={getAnalytics:(t=`30d`)=>e.summary(t)};export{t};

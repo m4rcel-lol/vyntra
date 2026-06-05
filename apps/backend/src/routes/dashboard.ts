@@ -16,7 +16,7 @@ export async function registerDashboardRoutes(app: FastifyInstance): Promise<voi
       assignedById: user.id
     });
 
-    const [profile, recentViews, recentClicks, announcements, fileCount, templateCount] = await Promise.all([
+    const [profile, recentViews, recentClicks, announcements, fileCount, templateCount, friendCount] = await Promise.all([
       app.prisma.profile.findUnique({
         where: { id: user.profileId },
         include: {
@@ -46,7 +46,13 @@ export async function registerDashboardRoutes(app: FastifyInstance): Promise<voi
         take: 3
       }),
       app.prisma.fileAsset.count({ where: { ownerUserId: user.id, deletedAt: null } }),
-      app.prisma.template.count({ where: { ownerUserId: user.id } })
+      app.prisma.template.count({ where: { ownerUserId: user.id } }),
+      app.prisma.friendship.count({
+        where: {
+          status: "ACCEPTED",
+          OR: [{ requesterId: user.id }, { addresseeId: user.id }]
+        }
+      })
     ]);
 
     if (!profile) fail(404, "PROFILE_NOT_FOUND", "Profile was not found");
@@ -75,7 +81,8 @@ export async function registerDashboardRoutes(app: FastifyInstance): Promise<voi
         links: profile.links.length,
         badges: profile.badges.length,
         files: fileCount,
-        templates: templateCount
+        templates: templateCount,
+        friends: friendCount
       },
       checklist: [
         { key: "avatar", label: "Upload an avatar", done: Boolean(profile.avatarFileId) },

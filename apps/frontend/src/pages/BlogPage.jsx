@@ -120,7 +120,7 @@ export default function BlogPage() {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading posts
               </div>
             ) : posts.length ? (
-              <div className="mt-10 grid gap-5 lg:grid-cols-2">
+              <div className="mt-10 grid items-stretch gap-5 lg:grid-cols-2">
                 {posts.map((post) => (
                   <BlogPostCard
                     key={post.id}
@@ -161,7 +161,7 @@ export default function BlogPage() {
 
 function BlogPostCard({ post, canManage, busy, onLike, onPin, onEdit }) {
   return (
-    <GlassCard glow={post.isPinned} className="group flex h-full flex-col p-6">
+    <GlassCard glow={post.isPinned} className="group flex h-full min-h-[21rem] flex-col p-6">
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-wrap items-center gap-2">
           {post.isPinned && <Badge className="border-border bg-secondary text-foreground"><Pin className="mr-1 h-3 w-3" /> Pinned</Badge>}
@@ -179,7 +179,7 @@ function BlogPostCard({ post, canManage, busy, onLike, onPin, onEdit }) {
         )}
       </div>
 
-      <Link to={`/blog/${post.slug}`} className="mt-5 block">
+      <Link to={`/blog/${post.slug}`} className="mt-5 block flex-1">
         <h2 className="font-display text-2xl font-semibold tracking-tight transition-colors group-hover:text-foreground/80">{post.title}</h2>
         <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-muted-foreground">{post.excerpt || 'Read the full update on the Vyntra blog.'}</p>
       </Link>
@@ -188,7 +188,10 @@ function BlogPostCard({ post, canManage, busy, onLike, onPin, onEdit }) {
         <div className="flex min-w-0 items-center gap-3">
           <img src={post.author.avatar} alt={post.author.displayName} className="h-9 w-9 rounded-xl object-cover" />
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium">{post.author.displayName}</p>
+            <p className="flex items-center gap-2 truncate text-sm font-medium">
+              {post.author.displayName}
+              {post.author.role !== 'user' && <Badge variant="outline" className="h-5 px-1.5 text-[10px] uppercase">{post.author.role}</Badge>}
+            </p>
             <p className="text-xs text-muted-foreground">@{post.author.username} · {formatDate(post.publishedAt)}</p>
           </div>
         </div>

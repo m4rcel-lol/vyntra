@@ -278,12 +278,12 @@ export default function LandingPage() {
                 align="left"
                 eyebrow="Showcase"
                 title="A profile that feels alive"
-                description="Cinematic backgrounds, glowing badges, an activity card and a frosted music player — all responsive, all yours."
+                description="Cinematic backgrounds, glowing badges, polished links and a frosted music player — all responsive, all yours."
               />
               <ul className="mt-8 space-y-4">
                 {[
                   { icon: Brush, t: 'Click-to-enter intro', d: 'A cinematic entrance before your page reveals.' },
-                  { icon: MousePointerClick, t: 'Discord & Spotify cards', d: 'Show what you are playing and listening to, live.' },
+                  { icon: MousePointerClick, t: 'Custom cursor and trails', d: 'Give public profiles a cursor style that matches the page.' },
                   { icon: Globe, t: 'Reverse proxy ready', d: 'Run behind Caddy, Nginx, or Traefik with your own domain.' },
                 ].map((item) => (
                   <li key={item.t} className="flex gap-4">

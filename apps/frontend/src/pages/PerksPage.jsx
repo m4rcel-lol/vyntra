@@ -22,9 +22,9 @@ const perkGroups = [
     perks: ['Particles, snow, rain, stars, sparkles, and shape effects', 'Click-to-enter intro screens', 'Custom cursor and cursor trail options', 'Background music player with loop and volume controls'],
   },
   {
-    title: 'Links and embeds',
+    title: 'Links and media',
     icon: Globe,
-    perks: ['Unlimited profile links', 'Built-in social icons', 'Custom link icons', 'YouTube, Twitch, Spotify, SoundCloud, Discord-style, and portfolio embeds'],
+    perks: ['Unlimited profile links', 'Built-in social icons', 'Custom link icons', 'Clean hover labels and click analytics'],
   },
   {
     title: 'Badges and identity',

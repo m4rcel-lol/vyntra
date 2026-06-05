@@ -115,7 +115,7 @@ export default function BlogPostPage() {
 
       <main className="px-4 py-12 sm:px-6 sm:py-20">
         <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.13),transparent_34%)]" />
-        <article className="mx-auto max-w-3xl">
+        <article className="mx-auto max-w-4xl">
           <div className="flex flex-wrap items-center gap-2">
             {post.isPinned && <Badge className="border-border bg-secondary text-foreground"><Pin className="mr-1 h-3 w-3" /> Pinned</Badge>}
             {!post.isPublished && <Badge variant="outline">Draft</Badge>}
@@ -128,7 +128,10 @@ export default function BlogPostPage() {
             <div className="flex min-w-0 items-center gap-3">
               <img src={post.author.avatar} alt={post.author.displayName} className="h-11 w-11 rounded-xl object-cover" />
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{post.author.displayName}</p>
+                <p className="flex items-center gap-2 truncate text-sm font-medium">
+                  {post.author.displayName}
+                  {post.author.role !== 'user' && <Badge variant="outline" className="h-5 px-1.5 text-[10px] uppercase">{post.author.role}</Badge>}
+                </p>
                 <p className="text-xs text-muted-foreground">@{post.author.username} · {formatDate(post.publishedAt)}</p>
               </div>
             </div>

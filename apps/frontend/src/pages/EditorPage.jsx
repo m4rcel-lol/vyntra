@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
-  User, Image, Sparkles, Link2, Award, Music2,
-  PlaySquare, FileText, BarChart3, SlidersHorizontal, Save, Eye,
+  User, Image, Sparkles, Link2, Music2,
+  FileText, BarChart3, SlidersHorizontal, Save, Eye,
   ChevronLeft, ChevronRight, AlertTriangle,
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -18,9 +18,7 @@ import { IdentityTab } from '@/components/editor/tabs/IdentityTab';
 import { BackgroundTab } from '@/components/editor/tabs/BackgroundTab';
 import { EffectsTab } from '@/components/editor/tabs/EffectsTab';
 import { LinksTab } from '@/components/editor/tabs/LinksTab';
-import { BadgesTab } from '@/components/editor/tabs/BadgesTab';
 import { MusicTab } from '@/components/editor/tabs/MusicTab';
-import { EmbedsTab } from '@/components/editor/tabs/EmbedsTab';
 import { MetadataTab } from '@/components/editor/tabs/MetadataTab';
 import { AnalyticsTab } from '@/components/editor/tabs/AnalyticsTab';
 import { AdvancedTab } from '@/components/editor/tabs/AdvancedTab';
@@ -32,9 +30,7 @@ const TABS = [
   { v: 'background', label: 'Background', icon: Image, C: BackgroundTab },
   { v: 'effects', label: 'Effects', icon: Sparkles, C: EffectsTab },
   { v: 'links', label: 'Links', icon: Link2, C: LinksTab },
-  { v: 'badges', label: 'Badges', icon: Award, C: BadgesTab },
   { v: 'music', label: 'Music', icon: Music2, C: MusicTab },
-  { v: 'embeds', label: 'Embeds', icon: PlaySquare, C: EmbedsTab },
   { v: 'metadata', label: 'Metadata', icon: FileText, C: MetadataTab },
   { v: 'analytics', label: 'Analytics', icon: BarChart3, C: AnalyticsTab },
   { v: 'advanced', label: 'Advanced', icon: SlidersHorizontal, C: AdvancedTab },
@@ -56,10 +52,17 @@ export default function EditorPage() {
     proceed: proceedBlockedNavigation,
     reset: resetBlockedNavigation,
   } = useUnsavedRouteGuard(dirty);
+  const activeEditorTab = TABS.some((tab) => tab.v === editorTab) ? editorTab : 'identity';
 
   useEffect(() => {
     loadCurrentProfile().catch((e) => toast.error(e.message || 'Could not load profile'));
   }, [loadCurrentProfile]);
+
+  useEffect(() => {
+    if (activeEditorTab !== editorTab) {
+      setEditorTab(activeEditorTab);
+    }
+  }, [activeEditorTab, editorTab, setEditorTab]);
 
   const updateTabScrollState = useCallback(() => {
     const el = tabListRef.current;
@@ -92,9 +95,9 @@ export default function EditorPage() {
     const el = tabListRef.current;
     if (!el) return;
 
-    const activeTab = el.querySelector(`[data-editor-tab="${editorTab}"]`);
+    const activeTab = el.querySelector(`[data-editor-tab="${activeEditorTab}"]`);
     activeTab?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-  }, [editorTab]);
+  }, [activeEditorTab]);
 
   const scrollTabs = (direction) => {
     tabListRef.current?.scrollBy({ left: direction * 240, behavior: 'smooth' });
@@ -156,7 +159,7 @@ export default function EditorPage() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(380px,440px)_1fr]">
-        <Tabs value={editorTab} onValueChange={setEditorTab} className="min-w-0">
+        <Tabs value={activeEditorTab} onValueChange={setEditorTab} className="min-w-0">
           <div className="sticky top-14 z-20 -mx-3 border-y border-border bg-background/92 px-3 py-2 backdrop-blur-xl sm:static sm:mx-0 sm:rounded-xl sm:border sm:bg-secondary/30 sm:p-1">
             <div className="flex items-center gap-1">
               <Button

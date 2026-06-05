@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import {
   LayoutDashboard, PenTool, LayoutTemplate, BarChart3, Settings,
   ShieldCheck, ChevronLeft, LogOut, ExternalLink, Sparkles, FolderOpen, Trophy, Newspaper,
+  MessageCircle, MessagesSquare, Headphones,
 } from 'lucide-react';
 import { Logo } from '@/components/common/Logo';
 import { Button } from '@/components/ui/button';
@@ -24,14 +25,17 @@ export const NAV_ITEMS = [
   { to: '/dashboard/templates', label: 'Templates', icon: LayoutTemplate },
   { to: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
   { to: '/dashboard/files', label: 'Files', icon: FolderOpen },
+  { to: '/dashboard/messages', label: 'Messages', icon: MessageCircle },
+  { to: '/dashboard/support', label: 'Support', icon: Headphones },
   { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   { to: '/blog', label: 'Blog', icon: Newspaper },
+  { to: '/forums', label: 'Forums', icon: MessagesSquare },
   { to: '/dashboard/settings', label: 'Settings', icon: Settings },
   { to: '/admin', label: 'Admin', icon: ShieldCheck, adminOnly: true },
 ];
 
 const MOBILE_NAV_ITEMS = NAV_ITEMS.filter((item) =>
-  ['/dashboard', '/dashboard/editor', '/dashboard/analytics', '/dashboard/files', '/dashboard/settings'].includes(item.to)
+  ['/dashboard', '/dashboard/editor', '/dashboard/messages', '/dashboard/support', '/dashboard/settings'].includes(item.to)
 );
 
 export const SidebarContent = ({ collapsed = false, onNavigate }) => {

@@ -151,7 +151,7 @@ export async function registerAdminRoutes(app) {
     app.post("/api/admin/badges", async (request) => {
         const actor = requireRole(request, ["ADMIN"]);
         const body = globalBadgeSchema.parse(request.body);
-        assertBadgeIsNotProtected(body.slug);
+        assertBadgeIsNotProtected(body.slug, actor.role);
         const badge = await app.prisma.badge.upsert({
             where: { slug: body.slug },
             create: {
@@ -190,7 +190,7 @@ export async function registerAdminRoutes(app) {
         if (!profile || !badge)
             fail(404, "NOT_FOUND", "Profile or badge was not found");
         assertOwnerTargetAllowed(profile.user.role, profile.user.id, actor.id);
-        assertBadgeIsNotProtected(badge.slug);
+        assertBadgeIsNotProtected(badge.slug, actor.role);
         const userBadge = await app.prisma.userBadge.upsert({
             where: { profileId_badgeId: { profileId: profile.id, badgeId: badge.id } },
             create: { profileId: profile.id, badgeId: badge.id, assignedById: actor.id },
@@ -217,7 +217,7 @@ export async function registerAdminRoutes(app) {
         if (!badge)
             fail(404, "BADGE_NOT_FOUND", "Badge was not found");
         assertOwnerTargetAllowed(profile.user.role, profile.user.id, actor.id);
-        assertBadgeIsNotProtected(badge.slug);
+        assertBadgeIsNotProtected(badge.slug, actor.role);
         await app.prisma.userBadge.deleteMany({
             where: {
                 profileId: params.profileId,
@@ -446,8 +446,8 @@ function assertRolePatchAllowed(params) {
         fail(403, "SELF_ROLE_CHANGE_PROTECTED", "You cannot change your own admin role from the admin panel");
     }
 }
-function assertBadgeIsNotProtected(slug) {
-    if (isRoleBadgeSlug(slug)) {
+function assertBadgeIsNotProtected(slug, actorRole) {
+    if (actorRole !== "OWNER" && isRoleBadgeSlug(slug)) {
         fail(403, "BADGE_PROTECTED", "Role badges are managed by the system and cannot be changed from the admin panel");
     }
 }

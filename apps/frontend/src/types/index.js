@@ -77,11 +77,8 @@
  * @property {SocialLink[]} links
  * @property {Badge[]} badges
  * @property {Object} music
- * @property {Object} embeds
  * @property {Object} metadata
  * @property {Object} advanced
- * @property {Object} discordActivity
- * @property {Object} spotifyActivity
  */
 
 export const PROFILE_LAYOUTS = [

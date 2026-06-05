@@ -240,6 +240,163 @@ export const blogApi = {
   },
 };
 
+export const notificationApi = {
+  async list() {
+    const result = await api('/api/notifications');
+    return result.notifications ?? [];
+  },
+
+  async clear() {
+    return api('/api/notifications/clear', { method: 'POST' });
+  },
+
+  async markRead(id) {
+    return api(`/api/notifications/${id}/read`, { method: 'PATCH' });
+  },
+};
+
+export const socialApi = {
+  async myFriends() {
+    const result = await api('/api/friends/me');
+    return {
+      friends: (result.friends ?? []).map(mapSocialUser),
+      incomingCount: result.incomingCount ?? 0,
+      outgoingCount: result.outgoingCount ?? 0,
+    };
+  },
+
+  async publicFriends(username) {
+    const result = await api(`/api/users/${encodeURIComponent(username)}/friends`);
+    return {
+      count: result.count ?? 0,
+      state: result.state ?? 'guest',
+      friends: (result.friends ?? []).map(mapSocialUser),
+    };
+  },
+
+  async addFriend(username) {
+    return api(`/api/users/${encodeURIComponent(username)}/friend`, { method: 'POST' });
+  },
+
+  async removeFriend(username) {
+    return api(`/api/users/${encodeURIComponent(username)}/friend`, { method: 'DELETE' });
+  },
+
+  async conversations() {
+    const result = await api('/api/messages/conversations');
+    return (result.conversations ?? []).map(mapConversationSummary);
+  },
+
+  async conversation(id) {
+    const result = await api(`/api/messages/conversations/${id}`);
+    return {
+      conversation: {
+        ...result.conversation,
+        friend: mapSocialUser(result.conversation?.friend),
+      },
+      messages: (result.messages ?? []).map(mapDirectMessage),
+    };
+  },
+
+  async sendMessage(username, body) {
+    const result = await api(`/api/messages/${encodeURIComponent(username)}`, {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    });
+    return {
+      conversationId: result.conversationId,
+      message: mapDirectMessage(result.message),
+    };
+  },
+};
+
+export const forumApi = {
+  async list() {
+    const result = await api('/api/forums');
+    return (result.categories ?? []).map((category) => ({
+      ...category,
+      threads: (category.threads ?? []).map(mapForumThread),
+    }));
+  },
+
+  async createThread(payload) {
+    const result = await api('/api/forums/threads', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return mapForumDetail(result);
+  },
+
+  async getThread(slug) {
+    const result = await api(`/api/forums/threads/${encodeURIComponent(slug)}`);
+    return mapForumDetail(result);
+  },
+
+  async reply(threadId, bodyMarkdown) {
+    const result = await api(`/api/forums/threads/${threadId}/replies`, {
+      method: 'POST',
+      body: JSON.stringify({ bodyMarkdown }),
+    });
+    return { post: mapForumPost(result.post) };
+  },
+
+  async updateThread(id, patch) {
+    const result = await api(`/api/forums/threads/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    });
+    return mapForumDetail(result);
+  },
+};
+
+export const supportApi = {
+  async myConversations() {
+    const result = await api('/api/support/conversations/me');
+    return (result.conversations ?? []).map(mapSupportConversation);
+  },
+
+  async adminConversations() {
+    const result = await api('/api/admin/support/conversations');
+    return (result.conversations ?? []).map(mapSupportConversation);
+  },
+
+  async create(payload) {
+    const result = await api('/api/support/conversations', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return mapSupportConversation(result.conversation);
+  },
+
+  async get(id) {
+    const result = await api(`/api/support/conversations/${id}`);
+    return mapSupportConversation(result.conversation);
+  },
+
+  async sendMessage(id, body) {
+    const result = await api(`/api/support/conversations/${id}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    });
+    return mapSupportConversation(result.conversation);
+  },
+
+  async escalate(id) {
+    const result = await api(`/api/support/conversations/${id}/escalate`, { method: 'POST' });
+    return mapSupportConversation(result.conversation);
+  },
+
+  async accept(id) {
+    const result = await api(`/api/support/conversations/${id}/accept`, { method: 'POST' });
+    return mapSupportConversation(result.conversation);
+  },
+
+  async close(id) {
+    const result = await api(`/api/support/conversations/${id}/close`, { method: 'POST' });
+    return mapSupportConversation(result.conversation);
+  },
+};
+
 export const filesApi = {
   async list() {
     const result = await api('/api/files');
@@ -401,7 +558,6 @@ function mapProfileResponse(response) {
   const theme = asObject(profile.theme);
   const effects = asObject(profile.effects);
   const metadata = asObject(profile.metadata);
-  const embeds = Array.isArray(profile.embeds) ? profile.embeds : [];
   const username = profile.username;
   const avatar = assets.avatar?.url || fallbackAvatar(username);
   const banner = assets.banner?.url || ABSTRACT.fluid2;
@@ -466,14 +622,7 @@ function mapProfileResponse(response) {
       volume: Number.isFinite(Number(musicActivity.volume)) ? Math.max(0, Math.min(100, Number(musicActivity.volume))) : 45,
       src: audioUrl,
     },
-    embeds: {
-      youtube: findEmbed(embeds, 'youtube'),
-      twitch: findEmbed(embeds, 'twitch'),
-      spotify: findEmbed(embeds, 'spotify'),
-      soundcloud: findEmbed(embeds, 'soundcloud'),
-      discordActivity: true,
-      portfolioCard: profile.layout === 'portfolio-grid',
-    },
+    embeds: {},
     metadata: {
       title: metadata.title || `${profile.displayName || username} · Vyntra.bio`,
       description: metadata.description || profile.bio || 'A creator profile on Vyntra.bio',
@@ -485,18 +634,6 @@ function mapProfileResponse(response) {
       visibility: profile.isPublic === false ? 'private' : 'public',
       seo: true,
     },
-    discordActivity: {
-      username,
-      status: 'online',
-      activity: 'On Vyntra.bio',
-      avatar,
-    },
-    spotifyActivity: hasMusic ? {
-      track: musicTitle,
-      artist: musicArtist,
-      cover: musicCover,
-      progress: Number.isFinite(Number(musicActivity.progress)) ? Math.max(0, Math.min(100, Number(musicActivity.progress))) : 42,
-    } : null,
     assetIds: {
       avatarFileId: assets.avatar?.id ?? null,
       bannerFileId: assets.banner?.id ?? null,
@@ -550,7 +687,7 @@ function profileToPatch(profile) {
       title: profile.metadata?.title,
       description: profile.metadata?.description,
     },
-    embeds: profileToEmbeds(profile),
+    embeds: [],
     customCss: profile.advanced?.customCss ?? '',
     avatarFileId: assetIdPatchValue(profile, 'avatarFileId'),
     bannerFileId: assetIdPatchValue(profile, 'bannerFileId'),
@@ -564,18 +701,6 @@ function profileToPatch(profile) {
 function assetIdPatchValue(profile, key) {
   const value = profile.assetIds?.[key];
   return value === undefined ? undefined : value;
-}
-
-function profileToEmbeds(profile) {
-  const entries = [];
-  for (const type of ['youtube', 'twitch', 'spotify', 'soundcloud']) {
-    const value = profile.embeds?.[type];
-    if (value) {
-      const url = /^https?:\/\//.test(value) ? value : `https://example.com/${type}/${encodeURIComponent(value)}`;
-      entries.push({ type, title: type, url });
-    }
-  }
-  return entries;
 }
 
 function mapLink(link) {
@@ -705,6 +830,93 @@ function mapBlogPost(post) {
   };
 }
 
+function mapSocialUser(user = {}) {
+  const username = user.username || 'user';
+  return {
+    id: user.id || username,
+    username,
+    role: String(user.role || 'USER').toLowerCase(),
+    displayName: user.displayName || username,
+    profileId: user.profileId || null,
+    uid: user.uid ?? null,
+    avatar: user.avatar?.url || fallbackAvatar(username),
+  };
+}
+
+function mapConversationSummary(conversation = {}) {
+  return {
+    id: conversation.id,
+    friend: mapSocialUser(conversation.friend),
+    lastMessage: conversation.lastMessage ? mapDirectMessage(conversation.lastMessage) : null,
+    updatedAt: conversation.updatedAt,
+  };
+}
+
+function mapDirectMessage(message = {}) {
+  return {
+    id: message.id,
+    body: message.body || '',
+    readAt: message.readAt || null,
+    createdAt: message.createdAt,
+    sender: mapSocialUser(message.sender),
+  };
+}
+
+function mapForumThread(thread = {}) {
+  return {
+    id: thread.id,
+    slug: thread.slug,
+    title: thread.title || 'Untitled thread',
+    excerpt: thread.excerpt || '',
+    bodyMarkdown: thread.bodyMarkdown || '',
+    isPinned: !!thread.isPinned,
+    isLocked: !!thread.isLocked,
+    replyCount: thread.replyCount ?? 0,
+    viewCount: thread.viewCount ?? 0,
+    createdAt: thread.createdAt,
+    updatedAt: thread.updatedAt,
+    category: thread.category,
+    author: mapSocialUser(thread.author),
+  };
+}
+
+function mapForumPost(post = {}) {
+  return {
+    id: post.id,
+    bodyMarkdown: post.bodyMarkdown || '',
+    createdAt: post.createdAt,
+    updatedAt: post.updatedAt,
+    author: mapSocialUser(post.author),
+  };
+}
+
+function mapForumDetail(result = {}) {
+  return {
+    thread: mapForumThread(result.thread),
+    posts: (result.posts ?? []).map(mapForumPost),
+  };
+}
+
+function mapSupportConversation(conversation = {}) {
+  return {
+    id: conversation.id,
+    subject: conversation.subject || 'Support request',
+    status: String(conversation.status || 'BOT').toLowerCase(),
+    createdAt: conversation.createdAt,
+    updatedAt: conversation.updatedAt,
+    closedAt: conversation.closedAt || null,
+    requester: mapSocialUser(conversation.requester),
+    assignedStaff: conversation.assignedStaff ? mapSocialUser(conversation.assignedStaff) : null,
+    messages: (conversation.messages ?? []).map((message) => ({
+      id: message.id,
+      authorRole: String(message.authorRole || 'BOT').toLowerCase(),
+      body: message.body || '',
+      createdAt: message.createdAt,
+      author: message.author ? mapSocialUser(message.author) : null,
+    })),
+  };
+}
+
 function rangeToDays(range) {
   if (range === '7d') return 7;
   if (range === '90d') return 90;
@@ -785,17 +997,6 @@ function badgeToIcon(input) {
   if (value.includes('gamer')) return 'Gamepad2';
   if (value.includes('unlimited')) return 'Infinity';
   return 'Star';
-}
-
-function findEmbed(embeds, type) {
-  const embed = embeds.find((item) => item.type === type);
-  if (!embed?.url) return '';
-  try {
-    const url = new URL(embed.url);
-    return url.pathname.split('/').filter(Boolean).pop() || embed.url;
-  } catch {
-    return embed.url;
-  }
 }
 
 function asObject(value) {

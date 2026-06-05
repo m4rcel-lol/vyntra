@@ -1,0 +1,1 @@
+import{h as e}from"./Logo-BeMl-kXZ.js";import{pt as t,s as n}from"./button-BTHMfbGB.js";var r=e(),i=({name:e,fallback:i=`Link`,...a})=>(0,r.jsx)(e&&n[e]||n[i]||t,{...a});export{i as t};

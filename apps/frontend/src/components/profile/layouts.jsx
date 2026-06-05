@@ -1,16 +1,13 @@
 import { motion } from 'framer-motion';
 import { Terminal as TerminalIcon, ArrowUpRight } from 'lucide-react';
-import { ProfileAvatar, ProfileIdentity, ProfileMeta, ProfileEmbeds, ProfileUsername } from './ProfileParts';
+import { ProfileAvatar, ProfileFriendActions, ProfileIdentity, ProfileMeta, ProfileUsername } from './ProfileParts';
 import { BadgeRow } from './BadgeRow';
 import { SocialLinks } from './SocialLinks';
-import { DiscordCard, SpotifyCard } from './ActivityCard';
 import { WALLPAPERS } from '@/mocks/assets';
 import { cn } from '@/lib/utils';
 
 const card = 'rounded-3xl glass-strong border-gradient shadow-elevated';
 const glow = (p) => (p.effects?.glowBorder ? { boxShadow: `0 0 60px -18px hsl(${p.accent} / 0.8), var(--shadow-elevated)` } : undefined);
-const hasProfileMusic = (profile) => Boolean(profile.music?.enabled && profile.music?.src && profile.spotifyActivity);
-const hasActivityCards = (profile) => Boolean(profile.embeds?.discordActivity || hasProfileMusic(profile));
 
 const Reveal = ({ children, delay = 0, className }) => (
   <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] }} className={className}>
@@ -28,13 +25,6 @@ export const CenteredLayout = ({ profile }) => (
         <ProfileIdentity profile={profile} className="mt-3" />
         <ProfileMeta profile={profile} className="mt-4" />
         <SocialLinks links={profile.links} accent={profile.accent} className="mt-5 w-full" />
-        {hasActivityCards(profile) && (
-          <div className="mt-4 w-full space-y-3">
-            {profile.embeds?.discordActivity && <DiscordCard activity={profile.discordActivity} />}
-            {hasProfileMusic(profile) && <SpotifyCard activity={profile.spotifyActivity} accent={profile.accent} />}
-          </div>
-        )}
-        <ProfileEmbeds profile={profile} className="mt-4 w-full" />
       </div>
     </div>
   </Reveal>
@@ -59,11 +49,7 @@ export const WideLayout = ({ profile }) => (
         <ProfileMeta profile={profile} align="left" className="mt-4" />
         <div className="mt-5 grid gap-5 sm:grid-cols-2">
           <SocialLinks links={profile.links} accent={profile.accent} />
-          <div className="space-y-3">
-            {profile.embeds?.discordActivity && <DiscordCard activity={profile.discordActivity} />}
-            {hasProfileMusic(profile) && <SpotifyCard activity={profile.spotifyActivity} accent={profile.accent} />}
-            <ProfileEmbeds profile={profile} />
-          </div>
+          <ProfileMeta profile={profile} align="left" />
         </div>
       </div>
     </div>
@@ -71,15 +57,16 @@ export const WideLayout = ({ profile }) => (
 );
 
 /* ---------- Minimal ---------- */
-export const MinimalLayout = ({ profile }) => (
+export const MinimalLayout = ({ profile, social }) => (
   <Reveal className="flex w-full max-w-[22rem] flex-col items-center text-center sm:max-w-sm">
     <ProfileAvatar profile={profile} size={84} />
     <h1 className="mt-5 max-w-full break-words font-display text-2xl font-semibold tracking-tight sm:text-3xl">{profile.displayName}</h1>
     <ProfileUsername profile={profile} />
+    <ProfileMeta profile={profile} className="mt-2.5" />
+    <ProfileFriendActions social={social} className="mt-4" />
     {profile.bio && <p className="mt-3 max-w-xs text-sm text-foreground/75">{profile.bio}</p>}
     <BadgeRow badges={profile.badges} className="mt-4" size="sm" />
     <SocialLinks links={profile.links} accent={profile.accent} className="mt-6 w-full" />
-    <ProfileMeta profile={profile} className="mt-6" />
   </Reveal>
 );
 
@@ -94,11 +81,6 @@ export const SidebarLayout = ({ profile }) => (
     <div className="max-h-[70vh] overflow-y-auto p-7">
       <ProfileMeta profile={profile} align="left" />
       <SocialLinks links={profile.links} accent={profile.accent} className="mt-5" />
-      <div className="mt-5 space-y-3">
-        {profile.embeds?.discordActivity && <DiscordCard activity={profile.discordActivity} />}
-        {hasProfileMusic(profile) && <SpotifyCard activity={profile.spotifyActivity} accent={profile.accent} />}
-      </div>
-      <ProfileEmbeds profile={profile} className="mt-5" />
     </div>
   </Reveal>
 );
@@ -226,13 +208,6 @@ export const SpotlightLayout = ({ profile }) => (
           <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Featured links</p>
           <SocialLinks links={profile.links.slice(0, 5)} accent={profile.accent} className="mt-4" />
         </div>
-        {hasActivityCards(profile) && (
-          <div className="space-y-3">
-            {profile.embeds?.discordActivity && <DiscordCard activity={profile.discordActivity} />}
-            {hasProfileMusic(profile) && <SpotifyCard activity={profile.spotifyActivity} accent={profile.accent} />}
-          </div>
-        )}
-        <ProfileEmbeds profile={profile} />
       </div>
     </div>
   </Reveal>
@@ -256,7 +231,6 @@ export const StackedLinksLayout = ({ profile }) => (
         <div className="mt-5 space-y-2.5">
           <SocialLinks links={profile.links} accent={profile.accent} />
         </div>
-        <ProfileEmbeds profile={profile} className="mt-4" />
       </div>
     </div>
   </Reveal>
@@ -285,13 +259,6 @@ export const EditorialLayout = ({ profile }) => (
           </div>
         </div>
         <SocialLinks links={profile.links} accent={profile.accent} className="mt-5" />
-        {hasActivityCards(profile) && (
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            {profile.embeds?.discordActivity && <DiscordCard activity={profile.discordActivity} />}
-            {hasProfileMusic(profile) && <SpotifyCard activity={profile.spotifyActivity} accent={profile.accent} />}
-          </div>
-        )}
-        <ProfileEmbeds profile={profile} className="mt-5" />
       </section>
     </div>
   </Reveal>
