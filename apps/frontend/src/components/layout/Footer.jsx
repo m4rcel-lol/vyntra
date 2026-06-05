@@ -28,9 +28,10 @@ const COLUMNS = [
     links: [
       { label: 'About', to: '/about' },
       { label: 'Blog', to: '/blog' },
+      { label: 'Support', to: '/support' },
       { label: 'Careers', to: '/careers' },
       { label: 'Press', to: '/press' },
-      { label: 'Contact', to: '/contact' },
+      { label: 'Contact', to: '/support' },
     ],
   },
   {

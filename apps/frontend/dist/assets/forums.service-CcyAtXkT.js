@@ -1,0 +1,1 @@
+import{l as e}from"./index-D3-95mY6.js";var t={list:()=>e.list(),createThread:t=>e.createThread(t),getThread:t=>e.getThread(t),reply:(t,n)=>e.reply(t,n),updateThread:(t,n)=>e.updateThread(t,n)};export{t};

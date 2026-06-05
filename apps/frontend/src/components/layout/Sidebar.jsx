@@ -26,7 +26,7 @@ export const NAV_ITEMS = [
   { to: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
   { to: '/dashboard/files', label: 'Files', icon: FolderOpen },
   { to: '/dashboard/messages', label: 'Messages', icon: MessageCircle },
-  { to: '/dashboard/support', label: 'Support', icon: Headphones },
+  { to: '/support', label: 'Support', icon: Headphones },
   { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   { to: '/blog', label: 'Blog', icon: Newspaper },
   { to: '/forums', label: 'Forums', icon: MessagesSquare },
@@ -35,7 +35,7 @@ export const NAV_ITEMS = [
 ];
 
 const MOBILE_NAV_ITEMS = NAV_ITEMS.filter((item) =>
-  ['/dashboard', '/dashboard/editor', '/dashboard/messages', '/dashboard/support', '/dashboard/settings'].includes(item.to)
+  ['/dashboard', '/dashboard/editor', '/dashboard/messages', '/support', '/dashboard/settings'].includes(item.to)
 );
 
 export const SidebarContent = ({ collapsed = false, onNavigate }) => {

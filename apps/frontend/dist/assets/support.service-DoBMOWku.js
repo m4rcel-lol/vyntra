@@ -1,0 +1,1 @@
+import{p as e}from"./index-D3-95mY6.js";var t={myConversations:()=>e.myConversations(),adminConversations:()=>e.adminConversations(),create:t=>e.create(t),get:t=>e.get(t),sendMessage:(t,n)=>e.sendMessage(t,n),escalate:t=>e.escalate(t),accept:t=>e.accept(t),close:t=>e.close(t)};export{t};

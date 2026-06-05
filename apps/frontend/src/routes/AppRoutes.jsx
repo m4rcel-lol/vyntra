@@ -69,7 +69,7 @@ export const AppRoutes = () => {
           <Route path="/about" element={<InfoPage page="about" />} />
           <Route path="/careers" element={<InfoPage page="careers" />} />
           <Route path="/press" element={<InfoPage page="press" />} />
-          <Route path="/contact" element={<InfoPage page="contact" />} />
+          <Route path="/contact" element={<Navigate to="/support" replace />} />
           <Route path="/privacy" element={<InfoPage page="privacy" />} />
           <Route path="/terms" element={<InfoPage page="terms" />} />
           <Route path="/cookies" element={<InfoPage page="cookies" />} />
@@ -82,8 +82,9 @@ export const AppRoutes = () => {
           <Route path="/dashboard/analytics" element={<Protected><AnalyticsPage /></Protected>} />
           <Route path="/dashboard/files" element={<Protected><FilesPage /></Protected>} />
           <Route path="/dashboard/messages" element={<Protected><MessagesPage /></Protected>} />
-          <Route path="/dashboard/support" element={<Protected><SupportPage /></Protected>} />
+          <Route path="/dashboard/support" element={<Navigate to="/support" replace />} />
           <Route path="/dashboard/settings" element={<Protected><SettingsPage /></Protected>} />
+          <Route path="/support" element={<Protected><SupportPage /></Protected>} />
           <Route path="/admin" element={<AdminOnly><AdminPage /></AdminOnly>} />
 
           <Route path="/editor" element={<Navigate to="/dashboard/editor" replace />} />
@@ -91,7 +92,6 @@ export const AppRoutes = () => {
           <Route path="/analytics" element={<Navigate to="/dashboard/analytics" replace />} />
           <Route path="/files" element={<Navigate to="/dashboard/files" replace />} />
           <Route path="/messages" element={<Navigate to="/dashboard/messages" replace />} />
-          <Route path="/support" element={<Navigate to="/dashboard/support" replace />} />
           <Route path="/settings" element={<Navigate to="/dashboard/settings" replace />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

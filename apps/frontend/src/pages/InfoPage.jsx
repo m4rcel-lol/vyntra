@@ -51,7 +51,7 @@ const pages = {
     title: 'Verified profiles',
     description: 'Verification is a trust signal controlled by the platform team, not a user-created visual style.',
     icon: BadgeCheck,
-    cta: { label: 'Contact staff', to: '/contact' },
+    cta: { label: 'Contact staff', to: '/support' },
     sections: [
       { title: 'Manual assignment', icon: Shield, body: 'Verified badges are assigned through moderation/admin tooling after review.' },
       { title: 'Inline display', icon: BadgeCheck, body: 'Verified appears directly after the username so visitors can identify it immediately.' },
@@ -99,7 +99,7 @@ const pages = {
     title: 'Careers',
     description: 'Vyntra.bio is self-hosted software, not a hiring marketplace. This page exists so the footer is complete and transparent.',
     icon: Briefcase,
-    cta: { label: 'Contact', to: '/contact' },
+    cta: { label: 'Contact', to: '/support' },
     sections: [
       { title: 'No open roles', icon: Briefcase, body: 'There are no public hiring roles listed for this self-hosted project right now.' },
       { title: 'Contribute', icon: Github, body: 'If you want to improve the project, contribute through the GitHub workflow used by the repository owner.' },
@@ -111,7 +111,7 @@ const pages = {
     title: 'Press',
     description: 'Use this page for quick project context, screenshots, and owner contact details when writing about Vyntra.bio.',
     icon: Newspaper,
-    cta: { label: 'Contact', to: '/contact' },
+    cta: { label: 'Contact', to: '/support' },
     sections: [
       { title: 'What it is', icon: Sparkles, body: 'A dark, polished, self-hosted bio-link and profile-card platform for creators.' },
       { title: 'What makes it different', icon: Shield, body: 'No paid tiers, no Stripe, no external S3 requirement, and no locked premium features.' },

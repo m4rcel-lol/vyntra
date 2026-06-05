@@ -138,7 +138,7 @@ export const Topbar = ({ title }) => {
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate('/dashboard/editor')}>Edit profile</DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate('/dashboard/messages')}>Messages</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate('/dashboard/support')}>Support</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/support')}>Support</DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate('/dashboard/settings')}>Settings</DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate('/dashboard/analytics')}>Analytics</DropdownMenuItem>
             <DropdownMenuSeparator />
