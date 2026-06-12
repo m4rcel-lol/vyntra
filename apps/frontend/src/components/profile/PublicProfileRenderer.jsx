@@ -43,7 +43,7 @@ export const PublicProfileRenderer = ({ profile, preview = false, forceEntered =
           {'[data-vyntra-custom-cursor], [data-vyntra-custom-cursor] * { cursor: var(--vyntra-custom-cursor) !important; }'}
         </style>
       )}
-      <ProfileBackground background={profile.background} />
+      <ProfileBackground background={{ ...profile.background, animation: profile.effects?.backgroundAnimation || 'none' }} />
       {/* readability vignette */}
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(120%_120%_at_50%_0%,transparent_40%,rgba(0,0,0,0.55)_100%)]" />
 

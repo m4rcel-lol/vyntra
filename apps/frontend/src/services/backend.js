@@ -142,6 +142,13 @@ export const profileApi = {
     await api(`/api/links/${id}`, { method: 'DELETE' });
   },
 
+  async reorderLinks(ids) {
+    await api('/api/links/reorder', {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    });
+  },
+
   async recordLinkClick(id) {
     await api(`/api/links/${id}/click`, { method: 'POST' });
   },
@@ -565,9 +572,9 @@ function mapProfileResponse(response) {
   const backgroundAsset = assets.background;
   const isVideo = backgroundAsset?.mimeType?.startsWith?.('video/');
   const isGif = backgroundAsset?.mimeType === 'image/gif';
-  const backgroundUrl = backgroundAsset?.url || assets.banner?.url || '';
+  const backgroundUrl = backgroundAsset?.url || '';
   const accent = hexToHsl(theme.accentColor || '#ffffff');
-  const particleMode = normalizeParticleMode(effects.particles);
+  const particleMode = effectParticleMode(effects);
   const cursorTrailMode = normalizeCursorTrail(effects.cursorTrail);
   const musicActivity = asObject(profile.musicActivity);
   const audioMetadata = asObject(assets.audio?.metadata);
@@ -627,8 +634,8 @@ function mapProfileResponse(response) {
     },
     embeds: {},
     metadata: {
-      title: metadata.title || `${profile.displayName || username} · Vyntra`,
-      description: metadata.description || profile.bio || 'A creator profile on Vyntra',
+      title: typeof metadata.title === 'string' ? metadata.title : '',
+      description: typeof metadata.description === 'string' ? metadata.description : '',
       ogImage: assets.metadata?.url || metadata.ogImage || '',
     },
     advanced: {
@@ -650,6 +657,12 @@ function mapProfileResponse(response) {
 }
 
 function profileToPatch(profile) {
+  const background = profile.background ?? {};
+  const particleMode = effectParticleMode(profile.effects);
+  const cursorTrailMode = profile.effects?.cursorTrail
+    ? (profile.effects.cursorTrailMode || 'glow')
+    : 'none';
+
   return {
     displayName: profile.displayName,
     bio: profile.bio,
@@ -679,16 +692,29 @@ function profileToPatch(profile) {
     effects: {
       blurOverlay: profile.background?.blur > 0,
       darkOverlay: Math.max(0, Math.min(0.9, (profile.background?.overlay ?? 45) / 100)),
-      particles: profile.effects?.snow ? 'snow' : profile.effects?.rain ? 'rain' : profile.effects?.stars ? 'stars' : profile.effects?.particles ? 'sparkles' : 'none',
-      cursorTrail: profile.effects?.cursorTrail ? 'glow' : 'none',
-      entranceAnimation: profile.effects?.pageEntrance ? 'scale' : 'none',
-      hoverAnimation: profile.effects?.floating ? 'lift' : 'none',
+      particles: particleMode,
+      particleDensity: clampNumber(profile.effects?.particleDensity, 10, 90, 32),
+      particleSpeed: clampNumber(profile.effects?.particleSpeed, 0.5, 2, 1),
+      effectIntensity: clampNumber(profile.effects?.effectIntensity, 0.2, 1, 0.7),
+      cursorTrail: cursorTrailMode,
+      entranceAnimation: profile.effects?.pageEntrance ? (profile.effects?.entranceAnimation || 'scale') : 'none',
+      hoverAnimation: profile.effects?.floating ? (profile.effects?.hoverAnimation || 'lift') : 'none',
       pageTransition: 'fade',
-      backgroundAnimation: profile.effects?.floating ? 'float' : 'none',
+      backgroundAnimation: profile.effects?.backgroundAnimation || 'none',
+      background: {
+        type: background.type || 'gradient',
+        color: background.color || '0 0% 4%',
+        gradient: background.gradient || '',
+        image: background.image || '',
+        video: background.video || '',
+        blur: clampNumber(background.blur, 0, 24, 0),
+        overlay: clampNumber(background.overlay, 0, 100, 45),
+      },
     },
     metadata: {
       title: profile.metadata?.title,
       description: profile.metadata?.description,
+      ogImage: profile.metadata?.ogImage || '',
     },
     embeds: [],
     customCss: profile.advanced?.customCss ?? '',
@@ -704,6 +730,54 @@ function profileToPatch(profile) {
 function assetIdPatchValue(profile, key) {
   const value = profile.assetIds?.[key];
   return value === undefined ? undefined : value;
+}
+
+function mapProfileBackground({ effects, backgroundAsset, backgroundUrl, banner, isVideo, isGif }) {
+  const saved = asObject(effects.background);
+  const savedType = ['solid', 'gradient', 'image', 'gif', 'video'].includes(saved.type) ? saved.type : '';
+  const assetType = isVideo ? 'video' : isGif ? 'gif' : backgroundUrl ? 'image' : '';
+  const type = savedType || assetType || 'gradient';
+  const fallbackGradient = 'linear-gradient(135deg, #050505 0%, #111111 50%, #050505 100%)';
+
+  const image = backgroundAsset
+    ? (isVideo ? (saved.image || banner) : backgroundUrl)
+    : (type === 'image' || type === 'gif' ? saved.image || backgroundUrl : '');
+
+  return {
+    type,
+    color: saved.color || '0 0% 4%',
+    gradient: saved.gradient || fallbackGradient,
+    image,
+    video: backgroundAsset && isVideo ? backgroundUrl : (type === 'video' ? saved.video || '' : ''),
+    blur: clampNumber(saved.blur, 0, 24, effects.blurOverlay ? 4 : 0),
+    overlay: clampNumber(saved.overlay, 0, 100, Math.round((Number(effects.darkOverlay ?? 0.45)) * 100)),
+  };
+}
+
+function normalizeParticleMode(value) {
+  const mode = String(value || '').toLowerCase();
+  return ['none', 'snow', 'rain', 'stars', 'bubbles', 'sparkles', 'shapes'].includes(mode) ? mode : 'stars';
+}
+
+function normalizeCursorTrail(value) {
+  const mode = String(value || '').toLowerCase();
+  return ['none', 'glow', 'stars', 'dots'].includes(mode) ? mode : 'none';
+}
+
+function effectParticleMode(effects = {}) {
+  const explicit = normalizeParticleMode(effects.particleMode);
+  if (explicit !== 'stars' || effects.particleMode) return explicit;
+  if (effects.snow) return 'snow';
+  if (effects.rain) return 'rain';
+  if (effects.stars) return 'stars';
+  if (effects.particles) return 'sparkles';
+  return 'none';
+}
+
+function clampNumber(value, min, max, fallback) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(min, Math.min(max, number));
 }
 
 function mapLink(link) {

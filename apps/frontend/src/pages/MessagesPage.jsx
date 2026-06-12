@@ -415,7 +415,7 @@ export default function MessagesPage() {
     <DashboardLayout
       title="Messages"
       fluid
-      mainClassName="h-[calc(100dvh-3.5rem)] overflow-hidden py-3 pb-24 sm:h-[calc(100dvh-4rem)] sm:py-4 lg:pb-4"
+      mainClassName="box-border h-[calc(100dvh-3.5rem)] overflow-hidden !py-3 !pb-24 sm:h-[calc(100dvh-4rem)] sm:!py-4 lg:!pb-4"
     >
       <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
       <CallOverlay

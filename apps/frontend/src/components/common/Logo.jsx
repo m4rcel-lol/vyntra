@@ -18,7 +18,7 @@ export const Logo = ({ className, showText = true, size = 28 }) => (
     </span>
     {showText && (
       <span className="font-display text-lg font-semibold tracking-tight">
-        Vyntra<span className="text-muted-foreground">.bio</span>
+        Vyntra
       </span>
     )}
   </span>

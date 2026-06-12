@@ -58,6 +58,12 @@ export const useProfileStore = create((set, get) => ({
       dirty: true,
     })),
 
+  setEffect: (key, value) =>
+    set((s) => ({
+      profile: { ...s.profile, effects: { ...s.profile.effects, [key]: value } },
+      dirty: true,
+    })),
+
   addLink: (link = {}) => {
     const tempLink = { id: nid(), label: 'New Link', url: 'https://example.com', icon: 'Link', style: 'glass', ...link };
     set((s) => ({ profile: { ...s.profile, links: [...s.profile.links, tempLink] }, dirty: true }));
@@ -93,13 +99,23 @@ export const useProfileStore = create((set, get) => ({
     }
   },
 
-  reorderLinks: (from, to) =>
+  reorderLinks: (from, to) => {
+    let orderedIds = [];
     set((s) => {
       const links = [...s.profile.links];
+      if (from < 0 || to < 0 || from >= links.length || to >= links.length || from === to) {
+        orderedIds = links.map((link) => link.id);
+        return s;
+      }
       const [moved] = links.splice(from, 1);
       links.splice(to, 0, moved);
+      orderedIds = links.map((link) => link.id);
       return { profile: { ...s.profile, links }, dirty: true };
-    }),
+    });
+    if (orderedIds.length && orderedIds.every((id) => !String(id).startsWith('tmp_'))) {
+      profileService.reorderLinks(orderedIds).catch((e) => set({ error: e.message || 'Could not reorder links' }));
+    }
+  },
 
   addBadge: (badge) =>
     set((s) => ({

@@ -38,6 +38,7 @@ services:
       PUBLIC_APP_NAME: "${PUBLIC_APP_NAME:-Vyntra.bio}"
       PUBLIC_APP_URL: "${PUBLIC_APP_URL:-http://localhost:8080}"
       FRONTEND_ORIGIN: "${FRONTEND_ORIGIN:-http://localhost:8080}"
+      FRONTEND_SHELL_URL: "${FRONTEND_SHELL_URL:-}"
       DATABASE_URL: "postgresql://${POSTGRES_USER:?Set POSTGRES_USER in .env}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:?Set POSTGRES_DB in .env}?schema=public"
       REDIS_URL: redis://valkey:6379
       COOKIE_SECRET: "${COOKIE_SECRET:?Set COOKIE_SECRET in .env}"

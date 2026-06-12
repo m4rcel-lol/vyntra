@@ -12,11 +12,19 @@ const DARK_PRESETS = ['0 0% 3%', '0 0% 6%', '230 25% 8%', '260 30% 10%', '210 40
 export const BackgroundTab = () => {
   const bg = useProfileStore((s) => s.profile.background);
   const setNested = useProfileStore((s) => s.setNested);
+  const setBackgroundType = (type) => {
+    setNested('background', 'type', type);
+    if (type === 'solid' || type === 'gradient') {
+      setNested('background', 'image', '');
+      setNested('background', 'video', '');
+      setNested('assetIds', 'backgroundFileId', null);
+    }
+  };
 
   return (
     <EditorSection title="Background" description="Set the scene behind your profile card.">
       <Field label="Type">
-        <Select value={bg.type} onValueChange={(v) => setNested('background', 'type', v)}>
+        <Select value={bg.type} onValueChange={setBackgroundType}>
           <SelectTrigger data-testid="bg-type"><SelectValue /></SelectTrigger>
           <SelectContent>
             {BACKGROUND_TYPES.map((t) => <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>)}

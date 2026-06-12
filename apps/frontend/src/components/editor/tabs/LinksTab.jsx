@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Plus, Trash2, ArrowUp, ArrowDown, GripVertical } from 'lucide-react';
 import { useProfileStore } from '@/stores/profile.store';
 import { EditorSection } from '@/components/editor/Field';
@@ -10,14 +11,44 @@ import { SOCIAL_ICONS, BUTTON_STYLES } from '@/types';
 export const LinksTab = () => {
   const links = useProfileStore((s) => s.profile.links);
   const { addLink, updateLink, removeLink, reorderLinks } = useProfileStore.getState();
+  const [dragIndex, setDragIndex] = useState(null);
+
+  const finishDrag = (toIndex) => {
+    if (dragIndex === null || dragIndex === toIndex) {
+      setDragIndex(null);
+      return;
+    }
+    reorderLinks(dragIndex, toIndex);
+    setDragIndex(null);
+  };
 
   return (
     <EditorSection title="Links" description="Add, reorder and style your links.">
       <div className="space-y-3">
         {links.map((l, i) => (
-          <div key={l.id} className="rounded-xl border border-border bg-secondary/20 p-3">
+          <div
+            key={l.id}
+            className="rounded-xl border border-border bg-secondary/20 p-3 transition-colors data-[dragging=true]:border-foreground/40 data-[dragging=true]:bg-secondary/45"
+            data-dragging={dragIndex === i}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={() => finishDrag(i)}
+          >
             <div className="flex items-center gap-2">
-              <GripVertical className="h-4 w-4 text-muted-foreground" />
+              <button
+                type="button"
+                draggable
+                onDragStart={(event) => {
+                  setDragIndex(i);
+                  event.dataTransfer.effectAllowed = 'move';
+                  event.dataTransfer.setData('text/plain', l.id);
+                }}
+                onDragEnd={() => setDragIndex(null)}
+                className="flex h-9 w-8 shrink-0 cursor-grab items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground active:cursor-grabbing"
+                aria-label={`Drag ${l.label || 'link'} to reorder`}
+                title="Drag to reorder"
+              >
+                <GripVertical className="h-5 w-5" />
+              </button>
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary/60"><Icon name={l.icon} className="h-4 w-4" /></div>
               <Input value={l.label} onChange={(e) => updateLink(l.id, { label: e.target.value })} placeholder="Label" className="h-9 min-w-0" />
               <div className="flex shrink-0 gap-1">

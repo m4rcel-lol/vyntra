@@ -19,12 +19,20 @@ export const defaultEffects = {
   glowBorder: true,
   floating: true,
   particles: true,
+  particleMode: 'sparkles',
+  particleDensity: 32,
+  particleSpeed: 1,
+  effectIntensity: 0.7,
   snow: false,
   rain: false,
   stars: true,
   cursorTrail: false,
+  cursorTrailMode: 'glow',
   clickToEnter: true,
   pageEntrance: true,
+  entranceAnimation: 'scale',
+  hoverAnimation: 'lift',
+  backgroundAnimation: 'none',
 };
 
 // Factory used by the editor store to spin up a fresh profile.

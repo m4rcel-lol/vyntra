@@ -57,7 +57,7 @@ export const DashboardLayout = ({ title, children, fluid = false, mainClassName 
       <div className={cn('transition-[padding] duration-300', collapsed ? 'lg:pl-[76px]' : 'lg:pl-64')}>
         <Topbar title={title} />
         <main className={cn('mx-auto w-full px-3 py-5 pb-28 sm:px-6 sm:py-6 lg:py-8 lg:pb-8', !fluid && 'max-w-7xl', mainClassName)}>
-          <PageTransition>{children}</PageTransition>
+          <PageTransition className="h-full min-h-0">{children}</PageTransition>
         </main>
       </div>
       <MobileBottomNav />
