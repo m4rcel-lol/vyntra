@@ -30,7 +30,9 @@ import { useAuthStore } from '@/stores/auth.store';
 import { formatRelative } from '@/utils/format';
 import { cn } from '@/lib/utils';
 
-const CALL_ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
+const CALL_ICE_SERVERS = [
+  { urls: ['stun:stun.l.google.com:19302', 'stun:global.stun.twilio.com:3478'] },
+];
 
 export default function MessagesPage() {
   const queryClient = useQueryClient();
@@ -55,8 +57,11 @@ export default function MessagesPage() {
   const callConversationIdRef = useRef('');
   const peerRef = useRef(null);
   const localStreamRef = useRef(null);
+  const remoteStreamRef = useRef(null);
   const remoteAudioRef = useRef(null);
   const ringtoneRef = useRef(null);
+  const queuedIceCandidatesRef = useRef([]);
+  const playbackWarningShownRef = useRef(false);
 
   const { data: conversations = [], isLoading, isError: conversationsError, error: conversationsErrorValue } = useQuery({
     queryKey: ['messages', 'conversations'],
@@ -170,6 +175,7 @@ export default function MessagesPage() {
       if (payload?.from?.id === currentUser?.id) return;
 
       if (event === 'voice:offer' && payload?.conversationId) {
+        queuedIceCandidatesRef.current = [];
         callConversationIdRef.current = payload.conversationId;
         setCallConversationId(payload.conversationId);
         setSelectedConversation(payload.conversationId);
@@ -185,13 +191,10 @@ export default function MessagesPage() {
       if (!payload?.conversationId || payload.conversationId !== activeCallConversationId) return;
 
       if (event === 'voice:answer' && payload.answer) {
-        peerRef.current?.setRemoteDescription(new RTCSessionDescription(payload.answer)).catch(() => null);
-        stopRingtone();
-        setCallStartedAt(Date.now());
-        setCallState('connected');
+        void handleVoiceAnswer(payload.answer);
       }
       if (event === 'voice:ice' && payload.candidate) {
-        peerRef.current?.addIceCandidate(new RTCIceCandidate(payload.candidate)).catch(() => null);
+        void handleRemoteIce(payload.candidate);
       }
       if (event === 'voice:end') {
         cleanupVoiceCall(false);
@@ -258,7 +261,8 @@ export default function MessagesPage() {
       setCallConversationId(activeConversationId);
       setCallStartedAt(null);
       setCallState('connecting');
-      const stream = await window.navigator.mediaDevices.getUserMedia({ audio: true });
+      queuedIceCandidatesRef.current = [];
+      const stream = await getCallAudioStream();
       const peer = createPeer(activeConversationId);
       localStreamRef.current = stream;
       stream.getTracks().forEach((track) => peer.addTrack(track, stream));
@@ -282,11 +286,12 @@ export default function MessagesPage() {
       callConversationIdRef.current = conversationId;
       setCallConversationId(conversationId);
       setCallState('connecting');
-      const stream = await window.navigator.mediaDevices.getUserMedia({ audio: true });
-      const peer = createPeer(conversationId);
+      const stream = await getCallAudioStream();
+      const peer = createPeer(conversationId, { preserveQueuedIce: true });
       localStreamRef.current = stream;
       stream.getTracks().forEach((track) => peer.addTrack(track, stream));
       await peer.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
+      await flushQueuedIceCandidates();
       const answer = await peer.createAnswer();
       await peer.setLocalDescription(answer);
       await emitRealtime('voice:answer', { conversationId, answer });
@@ -299,8 +304,56 @@ export default function MessagesPage() {
     }
   }
 
-  function createPeer(conversationId) {
-    resetVoiceResources();
+  async function handleVoiceAnswer(answer) {
+    const peer = peerRef.current;
+    if (!peer) return;
+    try {
+      await peer.setRemoteDescription(new RTCSessionDescription(answer));
+      await flushQueuedIceCandidates();
+      stopRingtone();
+      setCallStartedAt((startedAt) => startedAt || Date.now());
+      setCallState('connected');
+    } catch (error) {
+      toast.error(error?.message || 'Could not connect voice audio');
+      cleanupVoiceCall(true);
+    }
+  }
+
+  async function handleRemoteIce(candidate) {
+    if (!candidate) return;
+    const peer = peerRef.current;
+    let iceCandidate;
+    try {
+      iceCandidate = new RTCIceCandidate(candidate);
+    } catch {
+      return;
+    }
+    if (!peer || !peer.remoteDescription) {
+      queuedIceCandidatesRef.current.push(iceCandidate);
+      return;
+    }
+    try {
+      await peer.addIceCandidate(iceCandidate);
+    } catch {
+      queuedIceCandidatesRef.current.push(iceCandidate);
+    }
+  }
+
+  async function flushQueuedIceCandidates() {
+    const peer = peerRef.current;
+    if (!peer || !peer.remoteDescription || !queuedIceCandidatesRef.current.length) return;
+    const candidates = queuedIceCandidatesRef.current.splice(0);
+    for (const candidate of candidates) {
+      try {
+        await peer.addIceCandidate(candidate);
+      } catch {
+        // A stale ICE candidate should not tear down an otherwise usable call.
+      }
+    }
+  }
+
+  function createPeer(conversationId, options = {}) {
+    resetVoiceResources({ clearQueuedIce: !options.preserveQueuedIce });
     const peer = new RTCPeerConnection({ iceServers: CALL_ICE_SERVERS });
     peerRef.current = peer;
     peer.onicecandidate = (event) => {
@@ -309,10 +362,16 @@ export default function MessagesPage() {
       }
     };
     peer.ontrack = (event) => {
-      if (remoteAudioRef.current && event.streams[0]) {
-        remoteAudioRef.current.srcObject = event.streams[0];
-        remoteAudioRef.current.play().catch(() => null);
+      let stream = event.streams?.[0] || remoteStreamRef.current;
+      if (!stream) {
+        stream = new MediaStream();
+        remoteStreamRef.current = stream;
       }
+      if (!event.streams?.[0] && !stream.getTracks().some((track) => track.id === event.track.id)) {
+        stream.addTrack(event.track);
+      }
+      remoteStreamRef.current = stream;
+      attachRemoteAudio(stream);
       stopRingtone();
       setCallStartedAt((startedAt) => startedAt || Date.now());
       setCallState('connected');
@@ -324,18 +383,45 @@ export default function MessagesPage() {
         setCallState('connected');
       }
       if (peer.connectionState === 'disconnected') setCallState('connecting');
-      if (['failed', 'closed'].includes(peer.connectionState)) cleanupVoiceCall(false);
+      if (peer.connectionState === 'failed') {
+        toast.error('Voice connection failed. Try calling again from both open message pages.');
+        cleanupVoiceCall(true);
+      }
+      if (peer.connectionState === 'closed') cleanupVoiceCall(false);
+    };
+    peer.oniceconnectionstatechange = () => {
+      if (peer.iceConnectionState === 'failed') {
+        peer.restartIce?.();
+      }
     };
     return peer;
   }
 
-  function resetVoiceResources() {
+  function attachRemoteAudio(stream) {
+    const audio = remoteAudioRef.current;
+    if (!audio) return;
+    if (audio.srcObject !== stream) audio.srcObject = stream;
+    audio.muted = false;
+    audio.volume = 1;
+    audio.play().catch(() => {
+      if (playbackWarningShownRef.current) return;
+      playbackWarningShownRef.current = true;
+      toast.info('Click the call window once if your browser blocks voice playback.');
+    });
+  }
+
+  function resetVoiceResources(options = {}) {
+    const clearQueuedIce = options.clearQueuedIce !== false;
     stopRingtone();
     localStreamRef.current?.getTracks().forEach((track) => track.stop());
     localStreamRef.current = null;
+    remoteStreamRef.current?.getTracks().forEach((track) => track.stop());
+    remoteStreamRef.current = null;
     peerRef.current?.close();
     peerRef.current = null;
     if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
+    playbackWarningShownRef.current = false;
+    if (clearQueuedIce) queuedIceCandidatesRef.current = [];
   }
 
   function cleanupVoiceCall(notifyPeer = true) {
@@ -766,6 +852,19 @@ function previewMessage(message) {
   if (message.body) return message.body;
   if (message.attachment) return `Attachment: ${message.attachment.originalName || 'file'}`;
   return 'Message';
+}
+
+function getCallAudioStream() {
+  if (!window.navigator.mediaDevices?.getUserMedia) {
+    throw new Error('Voice chat requires a browser with microphone support.');
+  }
+  return window.navigator.mediaDevices.getUserMedia({
+    audio: {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+    },
+  });
 }
 
 function formatBytes(bytes = 0) {

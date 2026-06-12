@@ -5,6 +5,7 @@ let running = false;
 let abortController = null;
 let reconnectTimer = null;
 let currentSid = '';
+let postQueue = Promise.resolve();
 const pendingOutbound = [];
 
 export function subscribeRealtime(listener) {
@@ -37,6 +38,7 @@ function stopRealtime() {
   if (reconnectTimer) window.clearTimeout(reconnectTimer);
   reconnectTimer = null;
   currentSid = '';
+  postQueue = Promise.resolve();
   pendingOutbound.length = 0;
   abortController?.abort();
   abortController = null;
@@ -49,7 +51,7 @@ export async function emitRealtime(event, payload = {}) {
     pendingOutbound.push(packet);
     return;
   }
-  await socketPost(currentSid, packet, abortController?.signal);
+  await enqueueSocketPost(currentSid, packet, abortController?.signal);
 }
 
 async function connectPolling(signal) {
@@ -61,7 +63,7 @@ async function connectPolling(signal) {
   await socketPost(sid, '40', signal);
   currentSid = sid;
   while (pendingOutbound.length) {
-    await socketPost(sid, pendingOutbound.shift(), signal);
+    await enqueueSocketPost(sid, pendingOutbound.shift(), signal);
   }
 
   while (running && !signal.aborted) {
@@ -75,7 +77,7 @@ async function connectPolling(signal) {
 async function handlePacket(sid, packet, signal) {
   if (!packet) return;
   if (packet === '2') {
-    await socketPost(sid, '3', signal);
+    await enqueueSocketPost(sid, '3', signal);
     return;
   }
   if (packet.startsWith('42')) {
@@ -104,6 +106,13 @@ async function socketPost(sid, body, signal) {
     signal,
   });
   if (!response.ok) throw new Error(`Socket.IO post failed with ${response.status}`);
+}
+
+function enqueueSocketPost(sid, body, signal) {
+  postQueue = postQueue
+    .catch(() => null)
+    .then(() => socketPost(sid, body, signal));
+  return postQueue;
 }
 
 function parsePackets(payload) {
