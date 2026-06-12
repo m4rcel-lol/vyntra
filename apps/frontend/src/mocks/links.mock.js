@@ -9,7 +9,7 @@ export const linkCatalogue = [
   { id: 'l_dc', label: 'Discord', url: 'https://discord.gg/vyntra', icon: 'Disc', style: 'glass' },
   { id: 'l_li', label: 'LinkedIn', url: 'https://linkedin.com/in/vyntra', icon: 'Linkedin', style: 'glass' },
   { id: 'l_tg', label: 'Telegram', url: 'https://t.me/vyntra', icon: 'Send', style: 'glass' },
-  { id: 'l_web', label: 'Portfolio', url: 'https://vyntra.bio', icon: 'Globe', style: 'solid' },
+  { id: 'l_web', label: 'Portfolio', url: 'https://vyntra.sarl', icon: 'Globe', style: 'solid' },
   { id: 'l_sc', label: 'SoundCloud', url: 'https://soundcloud.com/vyntra', icon: 'Rss', style: 'glass' },
-  { id: 'l_mail', label: 'Email', url: 'mailto:hi@vyntra.bio', icon: 'Mail', style: 'glass' },
+  { id: 'l_mail', label: 'Email', url: 'mailto:hi@vyntra.sarl', icon: 'Mail', style: 'glass' },
 ];

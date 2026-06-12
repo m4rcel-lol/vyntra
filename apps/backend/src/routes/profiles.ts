@@ -2,12 +2,13 @@ import { randomBytes } from "node:crypto";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { isProduction } from "../env.js";
+import { secureCookies } from "../env.js";
 import { requireUser } from "../lib/auth.js";
 import { sanitizeCustomCss } from "../lib/css.js";
 import { hashIp, hashVisitor } from "../lib/crypto.js";
 import { fail } from "../lib/errors.js";
 import { getClientIp, getCountryFromHeaders, getReferrer, getVisitorHash, parseUserAgent } from "../lib/http.js";
+import { roleBadgeSlug, syncRoleBadgeForUser } from "../lib/role-badges.js";
 import { serializeAsset } from "../lib/serialize.js";
 import { metadataSchema, profileEffectsSchema, profileThemeSchema, urlSchema } from "../lib/validators.js";
 import { isRouteReserved, usernameSchema } from "../lib/username.js";
@@ -16,21 +17,7 @@ const profileUpdateSchema = z.object({
   displayName: z.string().trim().min(1).max(40).optional(),
   bio: z.string().max(500).optional(),
   location: z.string().max(80).optional(),
-  layout: z
-    .enum([
-      "centered-glass",
-      "wide-horizontal",
-      "compact",
-      "minimal-text",
-      "split-sidebar",
-      "floating-card",
-      "terminal",
-      "portfolio-grid",
-      "spotlight",
-      "stacked-links",
-      "editorial"
-    ])
-    .optional(),
+  layout: z.literal("minimal-text").optional(),
   statusText: z.string().max(120).optional(),
   discordPresence: z.record(z.unknown()).optional(),
   musicActivity: z.record(z.unknown()).optional(),
@@ -75,14 +62,6 @@ const reorderSchema = z.object({
   ids: z.array(z.string().cuid()).min(1).max(100)
 });
 
-const customBadgeSchema = z.object({
-  name: z.string().trim().min(1).max(32),
-  tooltip: z.string().trim().max(120).default(""),
-  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#d4d4d4"),
-  glowColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#ffffff"),
-  iconFileId: z.string().cuid().nullable().optional()
-});
-
 export async function registerProfileRoutes(app: FastifyInstance): Promise<void> {
   app.get("/api/profiles/me", async (request) => {
     const user = requireUser(request);
@@ -114,8 +93,7 @@ export async function registerProfileRoutes(app: FastifyInstance): Promise<void>
     if (body.displayName !== undefined) updateData.displayName = body.displayName;
     if (body.bio !== undefined) updateData.bio = body.bio;
     if (body.location !== undefined) updateData.location = body.location;
-    if (body.layout !== undefined) updateData.layout = body.layout;
-    if (body.statusText !== undefined) updateData.statusText = body.statusText;
+    updateData.layout = "minimal-text";
     if (body.discordPresence !== undefined) updateData.discordPresence = body.discordPresence as Prisma.InputJsonValue;
     if (body.musicActivity !== undefined) updateData.musicActivity = body.musicActivity as Prisma.InputJsonValue;
     if (body.theme !== undefined) updateData.theme = body.theme as Prisma.InputJsonValue;
@@ -191,7 +169,7 @@ export async function registerProfileRoutes(app: FastifyInstance): Promise<void>
       reply.setCookie("vyntra_visitor", visitorToken, {
         httpOnly: true,
         sameSite: "lax",
-        secure: isProduction,
+        secure: secureCookies,
         path: "/",
         maxAge: 60 * 60 * 24 * 365
       });
@@ -397,26 +375,8 @@ export async function registerProfileRoutes(app: FastifyInstance): Promise<void>
   });
 
   app.post("/api/badges/custom", async (request) => {
-    const user = requireUser(request);
-    if (!user.profileId) fail(404, "PROFILE_NOT_FOUND", "Profile was not found");
-    const body = customBadgeSchema.parse(request.body);
-    if (body.iconFileId) await assertOwnedFile(app, user.id, body.iconFileId);
-
-    const badge = await app.prisma.badge.create({
-      data: {
-        ownerUserId: user.id,
-        slug: `custom-${user.id}-${Date.now()}`,
-        name: body.name,
-        tooltip: body.tooltip,
-        color: body.color,
-        glowColor: body.glowColor,
-        iconFileId: body.iconFileId ?? null
-      }
-    });
-    await app.prisma.userBadge.create({
-      data: { profileId: user.profileId, badgeId: badge.id, assignedById: user.id }
-    });
-    return { badge };
+    requireUser(request);
+    fail(410, "CUSTOM_BADGES_DISABLED", "Custom badge creation is disabled. Badges are managed by staff.");
   });
 }
 
@@ -446,10 +406,40 @@ function profileInclude(visibleOnly: boolean) {
 
 type ProfilePayload = Prisma.ProfileGetPayload<{ include: ReturnType<typeof profileInclude> }>;
 
-function serializeProfile(request: FastifyRequest, profile: ProfilePayload) {
+async function serializeProfile(request: FastifyRequest, profile: ProfilePayload) {
   const fileById = new Map(profile.files.map((file) => [file.id, file]));
   const musicActivity = asRecord(profile.musicActivity);
   const musicCoverFileId = typeof musicActivity.coverFileId === "string" ? musicActivity.coverFileId : "";
+  const roleBadge = await syncRoleBadgeForUser({
+    prisma: request.server.prisma,
+    userId: profile.user.id,
+    profileId: profile.id,
+    role: profile.user.role,
+    assignedById: profile.user.id
+  });
+  const roleBadgeSlugValue = roleBadgeSlug(profile.user.role);
+  const badges = profile.badges.map((userBadge) => ({
+    id: userBadge.badge.id,
+    name: userBadge.badge.name,
+    slug: userBadge.badge.slug,
+    color: userBadge.badge.color,
+    glowColor: userBadge.badge.glowColor,
+    tooltip: userBadge.badge.tooltip,
+    isGlobal: userBadge.badge.isGlobal,
+    icon: serializeAsset(request, userBadge.badge.icon)
+  }));
+  if (roleBadge && roleBadgeSlugValue && !badges.some((badge) => badge.slug === roleBadgeSlugValue)) {
+    badges.unshift({
+      id: roleBadge.id,
+      name: roleBadge.name,
+      slug: roleBadge.slug,
+      color: roleBadge.color,
+      glowColor: roleBadge.glowColor,
+      tooltip: roleBadge.tooltip,
+      isGlobal: roleBadge.isGlobal,
+      icon: serializeAsset(request, roleBadge.icon)
+    });
+  }
   return {
     profile: {
       id: profile.id,
@@ -458,8 +448,8 @@ function serializeProfile(request: FastifyRequest, profile: ProfilePayload) {
       displayName: profile.displayName,
       bio: profile.bio,
       location: profile.location,
-      layout: profile.layout,
-      statusText: profile.statusText,
+      layout: "minimal-text",
+      statusText: "",
       discordPresence: profile.discordPresence,
       musicActivity: profile.musicActivity,
       theme: profile.theme,
@@ -496,16 +486,7 @@ function serializeProfile(request: FastifyRequest, profile: ProfilePayload) {
       style: link.style,
       icon: serializeAsset(request, link.icon)
     })),
-    badges: profile.badges.map((userBadge) => ({
-      id: userBadge.badge.id,
-      name: userBadge.badge.name,
-      slug: userBadge.badge.slug,
-      color: userBadge.badge.color,
-      glowColor: userBadge.badge.glowColor,
-      tooltip: userBadge.badge.tooltip,
-      isGlobal: userBadge.badge.isGlobal,
-      icon: serializeAsset(request, userBadge.badge.icon)
-    }))
+    badges
   };
 }
 
@@ -534,20 +515,31 @@ async function validateProfileFiles(
   userId: string,
   body: z.infer<typeof profileUpdateSchema>
 ): Promise<void> {
-  const ids = [
-    body.avatarFileId,
-    body.bannerFileId,
-    body.backgroundFileId,
-    body.audioFileId,
-    body.cursorFileId,
-    body.metadataFileId
-  ].filter((id): id is string => Boolean(id));
+  const requirements = [
+    { id: body.avatarFileId, kinds: ["AVATAR"] },
+    { id: body.bannerFileId, kinds: ["BANNER"] },
+    { id: body.backgroundFileId, kinds: ["BACKGROUND_IMAGE", "BACKGROUND_VIDEO"] },
+    { id: body.audioFileId, kinds: ["AUDIO"] },
+    { id: body.cursorFileId, kinds: ["CURSOR"] },
+    { id: body.metadataFileId, kinds: ["METADATA_IMAGE"] }
+  ].filter((item): item is { id: string; kinds: string[] } => Boolean(item.id));
 
-  if (ids.length === 0) return;
-  const count = await app.prisma.fileAsset.count({
-    where: { id: { in: ids }, ownerUserId: userId, deletedAt: null }
+  if (requirements.length === 0) return;
+  const files = await app.prisma.fileAsset.findMany({
+    where: {
+      id: { in: requirements.map((item) => item.id) },
+      ownerUserId: userId,
+      deletedAt: null
+    },
+    select: { id: true, kind: true }
   });
-  if (count !== ids.length) fail(400, "INVALID_FILE_ASSET", "One or more selected files are invalid");
+  const fileById = new Map(files.map((file) => [file.id, file]));
+  for (const requirement of requirements) {
+    const file = fileById.get(requirement.id);
+    if (!file || !requirement.kinds.includes(file.kind)) {
+      fail(400, "INVALID_FILE_ASSET", "One or more selected profile assets are invalid for that field");
+    }
+  }
 }
 
 async function assertOwnedFile(app: FastifyInstance, userId: string, id: string): Promise<void> {

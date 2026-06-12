@@ -5,6 +5,7 @@ export const reservedRoutes = new Set([
   "analytics",
   "api",
   "assets",
+  "blog",
   "dashboard",
   "editor",
   "explore",

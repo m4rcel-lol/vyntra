@@ -6,10 +6,10 @@ import { cn } from '@/lib/utils';
 export const StatCard = ({ icon: Icon, label, value, delta, suffix, className }) => {
   const positive = typeof delta === 'number' ? delta >= 0 : null;
   return (
-    <GlassCard glow className={cn('p-5', className)}>
+    <GlassCard glow className={cn('p-4 sm:p-5', className)}>
       <div className="flex items-start justify-between">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary/60 text-foreground">
-          {Icon && <Icon className="h-5 w-5" />}
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary/60 text-foreground sm:h-10 sm:w-10">
+          {Icon && <Icon className="h-4 w-4 sm:h-5 sm:w-5" />}
         </div>
         {positive !== null && (
           <span
@@ -27,12 +27,12 @@ export const StatCard = ({ icon: Icon, label, value, delta, suffix, className })
         <motion.div
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
-          className="font-display text-2xl font-semibold tracking-tight"
+          className="font-display text-xl font-semibold tracking-tight sm:text-2xl"
         >
           {value}
           {suffix && <span className="ml-0.5 text-base text-muted-foreground">{suffix}</span>}
         </motion.div>
-        <p className="mt-1 text-sm text-muted-foreground">{label}</p>
+        <p className="mt-1 text-xs text-muted-foreground sm:text-sm">{label}</p>
       </div>
     </GlassCard>
   );

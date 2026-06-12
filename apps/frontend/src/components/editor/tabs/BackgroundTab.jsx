@@ -31,11 +31,11 @@ export const BackgroundTab = () => {
         <Field label="Gradient"><GradientPicker value={bg.gradient} onChange={(v) => setNested('background', 'gradient', v)} /></Field>
       )}
       {(bg.type === 'image' || bg.type === 'gif') && (
-        <Field label={bg.type === 'gif' ? 'GIF' : 'Image'}><FileUploadMock value={bg.image} onChange={(v, asset) => { setNested('background', 'image', v); setNested('assetIds', 'backgroundFileId', asset?.id ?? null); }} label="Background" /></Field>
+        <Field label={bg.type === 'gif' ? 'GIF' : 'Image'}><FileUploadMock value={bg.image} onChange={(v, asset) => { setNested('background', 'image', v); setNested('background', 'video', ''); setNested('assetIds', 'backgroundFileId', asset?.id ?? null); }} label="Background" kind="BACKGROUND_IMAGE" /></Field>
       )}
       {bg.type === 'video' && (
         <Field label="Video" hint="Upload an .mp4 or .webm file. It will be compressed before storage.">
-          <FileUploadMock value={bg.video || bg.image} onChange={(v, asset) => { setNested('background', 'video', v); setNested('assetIds', 'backgroundFileId', asset?.id ?? null); }} label="Video" />
+          <FileUploadMock value={bg.video || bg.image} onChange={(v, asset) => { setNested('background', 'video', v); setNested('background', 'image', v); setNested('assetIds', 'backgroundFileId', asset?.id ?? null); }} label="Video" kind="BACKGROUND_VIDEO" />
         </Field>
       )}
 

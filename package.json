@@ -14,7 +14,11 @@
     "build": "npm run build --workspaces",
     "typecheck": "npm run typecheck --workspaces",
     "seed": "npm run seed -w @vyntra/backend",
-    "prisma:generate": "npm run prisma:generate -w @vyntra/backend"
+    "prisma:generate": "npm run prisma:generate -w @vyntra/backend",
+    "prisma:migrate:deploy": "prisma migrate deploy"
+  },
+  "prisma": {
+    "schema": "apps/backend/prisma/schema.prisma"
   },
   "engines": {
     "node": ">=20.19.0",

@@ -6,7 +6,7 @@ import multipart from "@fastify/multipart";
 import { PrismaClient } from "@prisma/client";
 import { Redis } from "ioredis";
 import { Server as SocketServer } from "socket.io";
-import { allowedOrigins, env, isProduction } from "./env.js";
+import { allowedOrigins, env, secureCookies } from "./env.js";
 import "./types.js";
 import { assertCsrf, hydrateAuth } from "./lib/auth.js";
 import { sendError } from "./lib/errors.js";
@@ -14,10 +14,15 @@ import { ensureStorageDir } from "./lib/storage.js";
 import { registerAdminRoutes } from "./routes/admin.js";
 import { registerAnalyticsRoutes } from "./routes/analytics.js";
 import { registerAuthRoutes } from "./routes/auth.js";
+import { registerBlogRoutes } from "./routes/blog.js";
 import { registerDashboardRoutes } from "./routes/dashboard.js";
 import { registerFileRoutes } from "./routes/files.js";
+import { registerForumRoutes } from "./routes/forums.js";
+import { registerNotificationRoutes } from "./routes/notifications.js";
 import { registerProfileRoutes } from "./routes/profiles.js";
 import { registerReportRoutes } from "./routes/reports.js";
+import { registerSocialRoutes } from "./routes/social.js";
+import { registerSupportRoutes } from "./routes/support.js";
 import { registerTemplateRoutes } from "./routes/templates.js";
 import { registerRealtime } from "./realtime/socket.js";
 
@@ -81,12 +86,17 @@ export async function buildApp() {
     ok: true,
     name: env.PUBLIC_APP_NAME,
     environment: env.NODE_ENV,
-    secureCookies: isProduction
+    secureCookies
   }));
 
   await registerAuthRoutes(app);
+  await registerBlogRoutes(app);
   await registerDashboardRoutes(app);
   await registerProfileRoutes(app);
+  await registerSocialRoutes(app);
+  await registerForumRoutes(app);
+  await registerSupportRoutes(app);
+  await registerNotificationRoutes(app);
   await registerFileRoutes(app);
   await registerTemplateRoutes(app);
   await registerAnalyticsRoutes(app);

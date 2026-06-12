@@ -13,12 +13,12 @@ export const platformStats = {
 };
 
 export const adminUsers = [
-  { id: 'u1', username: 'nova', email: 'nova@vyntra.bio', role: 'user', plan: 'Unlimited', status: 'active', joined: '2023-03-14', reports: 0, avatar: PORTRAITS.p5 },
-  { id: 'u2', username: 'kairo', email: 'kairo@vyntra.bio', role: 'user', plan: 'Unlimited', status: 'active', joined: '2023-08-02', reports: 1, avatar: PORTRAITS.p6 },
-  { id: 'u3', username: 'lumen', email: 'lumen@vyntra.bio', role: 'moderator', plan: 'Unlimited', status: 'active', joined: '2024-01-21', reports: 0, avatar: PORTRAITS.p1 },
-  { id: 'u4', username: 'echo', email: 'echo@vyntra.bio', role: 'user', plan: 'Unlimited', status: 'suspended', joined: '2024-05-10', reports: 4, avatar: PORTRAITS.p4 },
-  { id: 'u5', username: 'arc', email: 'arc@vyntra.bio', role: 'user', plan: 'Unlimited', status: 'active', joined: '2024-06-18', reports: 0, avatar: PORTRAITS.p7 },
-  { id: 'u6', username: 'mira', email: 'mira@vyntra.bio', role: 'user', plan: 'Unlimited', status: 'pending', joined: '2024-09-01', reports: 2, avatar: PORTRAITS.p3 },
+  { id: 'u1', username: 'nova', email: 'nova@vyntra.sarl', role: 'user', plan: 'Unlimited', status: 'active', joined: '2023-03-14', reports: 0, avatar: PORTRAITS.p5 },
+  { id: 'u2', username: 'kairo', email: 'kairo@vyntra.sarl', role: 'user', plan: 'Unlimited', status: 'active', joined: '2023-08-02', reports: 1, avatar: PORTRAITS.p6 },
+  { id: 'u3', username: 'lumen', email: 'lumen@vyntra.sarl', role: 'moderator', plan: 'Unlimited', status: 'active', joined: '2024-01-21', reports: 0, avatar: PORTRAITS.p1 },
+  { id: 'u4', username: 'echo', email: 'echo@vyntra.sarl', role: 'user', plan: 'Unlimited', status: 'suspended', joined: '2024-05-10', reports: 4, avatar: PORTRAITS.p4 },
+  { id: 'u5', username: 'arc', email: 'arc@vyntra.sarl', role: 'user', plan: 'Unlimited', status: 'active', joined: '2024-06-18', reports: 0, avatar: PORTRAITS.p7 },
+  { id: 'u6', username: 'mira', email: 'mira@vyntra.sarl', role: 'user', plan: 'Unlimited', status: 'pending', joined: '2024-09-01', reports: 2, avatar: PORTRAITS.p3 },
 ];
 
 export const reportQueue = [

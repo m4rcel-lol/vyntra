@@ -1,5 +1,6 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import { hashPassword } from "./lib/crypto.js";
+import { syncRoleBadgeForUserId } from "./lib/role-badges.js";
 
 const prisma = new PrismaClient();
 
@@ -8,10 +9,11 @@ const adminEmail = process.env.SEED_ADMIN_EMAIL ?? "owner@example.com";
 const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? "ChangeMeNow123!";
 const ownerBio = "Self-hosted creator identity, without locked feature tiers.";
 const protectedOwnerUsernames = Array.from(new Set([adminUsername, "owner", "m5rcel"].map((name) => name.toLowerCase())));
+const normalizedAdminUsername = adminUsername.toLowerCase();
 
 const globalBadges = [
   ["owner", "Owner", "#facc15", "#facc15", "Platform owner"],
-  ["staff", "Staff", "#38bdf8", "#38bdf8", "Vyntra.bio staff"],
+  ["staff", "Staff", "#38bdf8", "#38bdf8", "Vyntra staff"],
   ["moderator", "Moderator", "#22c55e", "#22c55e", "Community moderator"],
   ["verified", "Verified", "#60a5fa", "#60a5fa", "Verified identity"],
   ["early-user", "Early User", "#f472b6", "#f472b6", "Joined during the early launch"],
@@ -20,15 +22,15 @@ const globalBadges = [
   ["musician", "Musician", "#34d399", "#34d399", "Creates music"],
   ["gamer", "Gamer", "#818cf8", "#818cf8", "Gaming profile"],
   ["partner", "Partner", "#2dd4bf", "#2dd4bf", "Community partner"],
-  ["contributor", "Contributor", "#c084fc", "#c084fc", "Contributed to Vyntra.bio"],
-  ["unlimited", "Unlimited", "#d4d4d4", "#ffffff", "All features unlocked for free"],
-  ["custom-badge", "Custom Badge", "#f0abfc", "#f0abfc", "User-created badge support"]
+  ["contributor", "Contributor", "#c084fc", "#c084fc", "Contributed to Vyntra"],
+  ["unlimited", "Unlimited", "#d4d4d4", "#ffffff", "All features unlocked for free"]
 ] as const;
 
 const reserved = [
   "admin",
   "api",
   "assets",
+  "blog",
   "dashboard",
   "editor",
   "explore",
@@ -47,20 +49,24 @@ const reserved = [
 ];
 
 async function main() {
+  const existingAdmin = await prisma.user.findUnique({
+    where: { username: normalizedAdminUsername },
+    include: { profile: true }
+  });
   const passwordHash = await hashPassword(adminPassword);
   const admin = await prisma.user.upsert({
-    where: { username: adminUsername.toLowerCase() },
+    where: { username: normalizedAdminUsername },
     create: {
-      username: adminUsername.toLowerCase(),
+      username: normalizedAdminUsername,
       email: adminEmail.toLowerCase(),
       passwordHash,
-      role: "ADMIN",
+      role: "OWNER",
       profile: {
         create: {
           displayName: "Vyntra Owner",
           bio: ownerBio,
-          location: "Vyntra.bio",
-          layout: "centered-glass",
+          location: "Vyntra",
+          layout: "minimal-text",
           theme: {
             accentColor: "#d8d8d8",
             textColor: "#ffffff",
@@ -75,13 +81,13 @@ async function main() {
             backgroundAnimation: "gradient"
           },
           metadata: {
-            title: "Vyntra.bio Owner",
-            description: "A creator profile powered by Vyntra.bio"
+            title: "Vyntra Owner",
+            description: "A creator profile powered by Vyntra"
           },
           links: {
             create: [
               {
-                title: "Vyntra.bio",
+                title: "Vyntra",
                 url: "https://example.com",
                 kind: "website",
                 order: 0
@@ -99,25 +105,55 @@ async function main() {
     },
     update: {
       email: adminEmail.toLowerCase(),
-      role: "ADMIN"
+      role: "OWNER"
     },
     include: { profile: true }
   });
 
-  if (admin.profile) {
+  const adminProfile = admin.profile ?? await prisma.profile.create({
+    data: {
+      userId: admin.id,
+      displayName: admin.username,
+      bio: ownerBio,
+      location: "Vyntra",
+      layout: "minimal-text",
+      theme: {
+        accentColor: "#d8d8d8",
+        textColor: "#ffffff",
+        cardOpacity: 0.72,
+        cardBlur: 24,
+        borderGlow: true
+      },
+      effects: {
+        particles: "stars",
+        entranceAnimation: "scale",
+        hoverAnimation: "lift",
+        backgroundAnimation: "gradient"
+      },
+      metadata: {
+        title: `${admin.username} on Vyntra`,
+        description: "A creator profile powered by Vyntra"
+      }
+    }
+  });
+
+  if (adminProfile && !existingAdmin?.profile && admin.profile) {
     await prisma.profile.update({
-      where: { id: admin.profile.id },
+      where: { id: adminProfile.id },
       data: {
         displayName: "Vyntra Owner",
         bio: ownerBio,
-        location: "Vyntra.bio",
-        statusText: "Creating something memorable"
+        location: "Vyntra",
+        layout: "minimal-text",
+        statusText: ""
       }
     });
+  }
 
+  if (adminProfile) {
     const starterSnapshot = {
-      layout: "centered-glass",
-      statusText: "Creating something memorable",
+      layout: "minimal-text",
+      statusText: "",
       theme: {
         accentColor: "#d8d8d8",
         textColor: "#ffffff",
@@ -133,13 +169,13 @@ async function main() {
       },
       metadata: {
         title: "Monochrome Starter",
-        description: "A clean dark Vyntra.bio profile template"
+        description: "A clean dark Vyntra profile template"
       },
       embeds: [],
       customCss: "",
       clickToEnter: true,
       links: [
-        { title: "Vyntra.bio", url: "https://example.com", kind: "website", order: 0, isVisible: true, style: {} },
+        { title: "Vyntra", url: "https://example.com", kind: "website", order: 0, isVisible: true, style: {} },
         { title: "GitHub", url: "https://github.com", kind: "github", order: 1, isVisible: true, style: {} }
       ],
       badges: [
@@ -193,6 +229,8 @@ async function main() {
     });
   }
 
+  await prisma.badge.deleteMany({ where: { slug: "custom-badge" } });
+
   for (const name of reserved) {
     await prisma.reservedUsername.upsert({
       where: { normalized: name },
@@ -209,33 +247,23 @@ async function main() {
     });
   }
 
-  const ownerBadge = await prisma.badge.findUnique({ where: { slug: "owner" } });
   const unlimitedBadge = await prisma.badge.findUnique({ where: { slug: "unlimited" } });
-  if (ownerBadge) {
-    const protectedOwners = await prisma.user.findMany({
-      where: { username: { in: protectedOwnerUsernames } },
-      include: { profile: true }
-    });
-    const ownerAssignments = protectedOwners
-      .filter((user) => user.profile)
-      .map((user) => ({
-        profileId: user.profile!.id,
-        badgeId: ownerBadge.id,
-        assignedById: admin.id,
-        order: 0
-      }));
-    if (ownerAssignments.length > 0) {
-      await prisma.userBadge.createMany({
-        data: ownerAssignments,
-        skipDuplicates: true
-      });
-    }
+  await prisma.user.updateMany({
+    where: { username: { in: protectedOwnerUsernames } },
+    data: { role: "OWNER" }
+  });
+  const roleUsers = await prisma.user.findMany({
+    where: { role: { in: ["OWNER", "ADMIN", "MODERATOR"] } },
+    select: { id: true }
+  });
+  for (const roleUser of roleUsers) {
+    await syncRoleBadgeForUserId({ prisma, userId: roleUser.id, assignedById: admin.id });
   }
 
-  if (admin.profile && unlimitedBadge) {
+  if (adminProfile && unlimitedBadge) {
     await prisma.userBadge.createMany({
       data: [
-        { profileId: admin.profile.id, badgeId: unlimitedBadge.id, assignedById: admin.id, order: 1 }
+        { profileId: adminProfile.id, badgeId: unlimitedBadge.id, assignedById: admin.id, order: 1 }
       ],
       skipDuplicates: true
     });
@@ -245,17 +273,49 @@ async function main() {
     where: { id: "seed-welcome-announcement" },
     create: {
       id: "seed-welcome-announcement",
-      title: "Welcome to Vyntra.bio",
+      title: "Welcome to Vyntra",
       body: "Every customization, badge, template, and analytics feature is available for free.",
       tone: "success",
       createdById: admin.id
     },
     update: {
       isActive: true,
-      title: "Welcome to Vyntra.bio",
+      title: "Welcome to Vyntra",
       body: "Every customization, badge, template, and analytics feature is available for free."
     }
   });
+
+  const existingWelcomePost = await prisma.blogPost.findUnique({
+    where: { slug: "welcome-to-vyntra" },
+    select: { id: true }
+  });
+  if (!existingWelcomePost) {
+    await prisma.blogPost.create({
+      data: {
+        authorUserId: admin.id,
+        slug: "welcome-to-vyntra",
+        title: "Welcome to Vyntra",
+        excerpt: "What the self-hosted Vyntra blog is for, and how staff can use it for updates.",
+        contentMarkdown: `# Welcome to Vyntra
+
+This blog is the public update feed for your self-hosted Vyntra instance.
+
+Staff and owners can publish posts, pin important announcements, and write in **Markdown**. Users can like posts when they are logged in.
+
+## What to post here
+
+- Product updates and changelogs
+- Community announcements
+- Self-hosting notes
+- Moderation and safety updates
+
+> Keep posts clear, useful, and easy to scan.`,
+        isPublished: true,
+        isPinned: true,
+        publishedAt: new Date()
+      }
+    });
+  }
 
   console.log(`Seeded admin user: ${admin.username}`);
 }

@@ -44,7 +44,7 @@ export const LivePreview = ({ className }) => {
             <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/40" />
             <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/40" />
             <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/40" />
-            <span className="mx-auto rounded-full bg-background px-4 py-0.5 text-xs text-muted-foreground">vyntra.bio/{profile.username}</span>
+            <span className="mx-auto rounded-full bg-background px-4 py-0.5 text-xs text-muted-foreground">vyntra.sarl/{profile.username}</span>
           </div>
           <div className="h-[620px] overflow-y-auto no-scrollbar">
             <PublicProfileRenderer profile={profile} preview forceEntered />

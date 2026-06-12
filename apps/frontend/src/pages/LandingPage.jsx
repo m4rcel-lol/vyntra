@@ -24,17 +24,17 @@ import { cn } from '@/lib/utils';
 const PROOF = ['Streamers', 'Designers', 'Musicians', 'Developers', 'Gamers', 'Photographers', 'Founders', 'Artists'];
 
 const FEATURES = [
-  { icon: Layers, title: '10 cinematic layouts', desc: 'Centered, wide, minimal, sidebar, floating, terminal, portfolio, spotlight, stacked, and editorial. Switch in one click.' },
+  { icon: Layers, title: 'Focused minimal profile', desc: 'A single polished layout keeps every page clean, fast, responsive, and recognizable.' },
   { icon: Palette, title: 'Total customization', desc: 'Gradients, images, GIFs and video backgrounds with blur, overlays and accent control.' },
   { icon: Wand2, title: 'Living effects', desc: 'Particles, snow, rain, stars, glow borders, cursor trails and a click-to-enter intro.' },
   { icon: Music, title: 'Background audio', desc: 'Set a signature track with a frosted player. Never autoplays without consent.' },
   { icon: BarChart3, title: 'Real-time analytics', desc: 'Views, clicks, countries and devices in a clean, glassy dashboard.' },
-  { icon: Shield, title: 'Unlimited badges', desc: 'Create custom badges, use global badges, and style every glow without locked tiers.' },
+  { icon: Shield, title: 'Trusted badges', desc: 'Use global, verified, role, and Unlimited badges with polished icon, color, and glow styling.' },
 ];
 
 const STEPS = [
-  { n: '01', title: 'Claim your link', desc: 'Grab your unique vyntra.bio/username in seconds.' },
-  { n: '02', title: 'Design it live', desc: 'Tune layout, effects and links with an instant live preview.' },
+  { n: '01', title: 'Claim your link', desc: 'Grab your unique vyntra.sarl/username in seconds.' },
+  { n: '02', title: 'Design it live', desc: 'Tune effects, media, colors and links with an instant live preview.' },
   { n: '03', title: 'Share everywhere', desc: 'One link for every platform, fully responsive and lightning fast.' },
 ];
 
@@ -46,16 +46,16 @@ const STATS = [
 ];
 
 const INCLUSIONS = [
-  { name: 'Create', highlight: false, features: ['Public profile page', 'All card layouts', 'Unlimited links', 'Community templates', 'Mobile responsive pages'], cta: 'Start building' },
+  { name: 'Create', highlight: false, features: ['Public profile page', 'Minimal identity layout', 'Unlimited links', 'Community templates', 'Mobile responsive pages'], cta: 'Start building' },
   { name: 'Customize', highlight: true, features: ['Video and image backgrounds', 'Background audio', 'Particles and cursor effects', 'Custom CSS with sanitization', 'Unlimited badges'], cta: 'Open the editor' },
   { name: 'Understand', highlight: false, features: ['Profile views', 'Unique visitors', 'Link click counts', 'Referrer and device summaries', 'Template import stats'], cta: 'View analytics' },
 ];
 
 const FAQS = [
-  { q: 'Is Vyntra.bio really free?', a: 'Yes. Every profile layout, effect, badge, template, upload type, and analytics view is available to every user for free.' },
+  { q: 'Is Vyntra really free?', a: 'Yes. Every effect, badge, template, upload type, and analytics view is available to every user for free.' },
   { q: 'Do I need to know how to code?', a: 'Not at all. Everything is visual with a live preview. Advanced users can still add sanitized custom CSS.' },
   { q: 'Can I use my own domain?', a: 'Yes. The app is reverse-proxy ready, so self-hosted installs can route custom domains through Caddy, Nginx, or Traefik.' },
-  { q: 'Will my profile work on mobile?', a: 'Every layout is fully responsive and tuned for fast loads on any device.' },
+  { q: 'Will my profile work on mobile?', a: 'The minimal profile layout is fully responsive and tuned for fast loads on any device.' },
   { q: 'Can I migrate my existing links?', a: 'Import a community template or start from scratch. Adding and reordering links takes seconds.' },
 ];
 
@@ -116,7 +116,7 @@ export default function LandingPage() {
               transition={{ delay: 0.12, duration: 0.6 }}
               className="mt-6 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg text-pretty"
             >
-              Vyntra.bio turns your links into a cinematic, animated profile card.
+              Vyntra turns your links into a cinematic, animated profile card.
               Pick a layout, drop in your accents, and ship a page that feels like you.
             </motion.p>
 
@@ -127,7 +127,7 @@ export default function LandingPage() {
               transition={{ delay: 0.18, duration: 0.6 }}
               className="mt-8 flex max-w-md items-center gap-2 rounded-2xl glass-panel border-gradient p-2"
             >
-              <span className="pl-3 text-sm text-muted-foreground">vyntra.bio/</span>
+              <span className="pl-3 text-sm text-muted-foreground">vyntra.sarl/</span>
               <Input
                 value={username}
                 onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
@@ -261,7 +261,7 @@ export default function LandingPage() {
           </Marquee>
         </div>
         <div className="mt-12 flex justify-center">
-          <Button variant="outline" onClick={() => navigate('/templates')} className="group">
+          <Button variant="outline" onClick={() => navigate('/explore')} className="group">
             Browse all templates
             <ArrowRight className="transition-transform group-hover:translate-x-0.5" />
           </Button>
@@ -278,12 +278,12 @@ export default function LandingPage() {
                 align="left"
                 eyebrow="Showcase"
                 title="A profile that feels alive"
-                description="Cinematic backgrounds, glowing badges, an activity card and a frosted music player — all responsive, all yours."
+                description="Cinematic backgrounds, glowing badges, polished links and a frosted music player — all responsive, all yours."
               />
               <ul className="mt-8 space-y-4">
                 {[
                   { icon: Brush, t: 'Click-to-enter intro', d: 'A cinematic entrance before your page reveals.' },
-                  { icon: MousePointerClick, t: 'Discord & Spotify cards', d: 'Show what you are playing and listening to, live.' },
+                  { icon: MousePointerClick, t: 'Custom cursor and trails', d: 'Give public profiles a cursor style that matches the page.' },
                   { icon: Globe, t: 'Reverse proxy ready', d: 'Run behind Caddy, Nginx, or Traefik with your own domain.' },
                 ].map((item) => (
                   <li key={item.t} className="flex gap-4">
@@ -336,7 +336,7 @@ export default function LandingPage() {
       {/* ============ INCLUDED ============ */}
       <section id="pricing" className="relative py-24">
         <div className="mx-auto max-w-6xl px-6">
-          <SectionHeading eyebrow="Free for everyone" title="No plans, no locked features" description="Vyntra.bio is built for self-hosting. Every advanced feature is included by default." />
+          <SectionHeading eyebrow="Free for everyone" title="No plans, no locked features" description="Vyntra is built for self-hosting. Every advanced feature is included by default." />
           <div className="mt-14 grid gap-6 lg:grid-cols-3">
             {INCLUSIONS.map((plan, i) => (
               <motion.div
@@ -417,7 +417,7 @@ export default function LandingPage() {
                 {isAuthenticated ? 'Open editor' : 'Claim your link'} <ArrowRight className="transition-transform group-hover:translate-x-0.5" />
               </Button>
               <Button size="lg" variant="outline" asChild>
-                <Link to="/templates">Explore templates</Link>
+                <Link to="/explore">Explore templates</Link>
               </Button>
             </div>
           </GlassCard>

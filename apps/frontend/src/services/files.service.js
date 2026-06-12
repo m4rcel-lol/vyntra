@@ -19,11 +19,11 @@ export const filesService = {
   listFiles: () => filesApi.list(),
   deleteFile: (id) => filesApi.remove(id),
   uploadFile: (file, kind) => filesApi.upload(file, kind),
-  async uploadAssetFile(file, label = 'Asset') {
-    const asset = await filesApi.upload(file, kindFromLabel(label));
+  async uploadAssetFile(file, label = 'Asset', explicitKind) {
+    const asset = await filesApi.upload(file, explicitKind || kindFromLabel(label));
     return { ...asset, name: asset.originalName, size: asset.sizeBytes };
   },
-  async uploadMockFile(file, label = 'Asset') {
-    return this.uploadAssetFile(file, label);
+  async uploadMockFile(file, label = 'Asset', explicitKind) {
+    return this.uploadAssetFile(file, label, explicitKind);
   },
 };

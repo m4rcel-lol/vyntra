@@ -32,7 +32,7 @@ const allowedMimeByKind: Record<string, readonly string[]> = {
   BACKGROUND_IMAGE: ["image/jpeg", "image/png", "image/webp", "image/gif"],
   BACKGROUND_VIDEO: ["video/mp4", "video/webm"],
   AUDIO: commonAudioMimes,
-  CURSOR: ["image/png", "image/webp", "image/gif"],
+  CURSOR: ["image/png", "image/gif", "image/vnd.microsoft.icon", "image/x-icon"],
   BADGE_ICON: ["image/jpeg", "image/png", "image/webp", "image/gif"],
   TEMPLATE_PREVIEW: ["image/jpeg", "image/png", "image/webp"],
   CUSTOM_ICON: ["image/jpeg", "image/png", "image/webp", "image/gif"],
@@ -88,8 +88,11 @@ export function safeFilename(name: string): string {
   return clean || "upload.bin";
 }
 
-export async function detectUploadMime(buffer: Buffer): Promise<string> {
+export async function detectUploadMime(buffer: Buffer, originalName = ""): Promise<string> {
   const detected = await fileTypeFromBuffer(buffer);
+  if (looksLikeCursorFile(buffer, originalName)) {
+    return "image/vnd.microsoft.icon";
+  }
   if (!detected?.mime) {
     fail(400, "UNKNOWN_FILE_TYPE", "Could not verify the uploaded file type");
   }
@@ -126,6 +129,9 @@ export async function compressUpload(params: {
   mimeType: string;
   body: Buffer;
 }): Promise<CompressedUpload> {
+  if (params.kind === "CURSOR") {
+    return preserveCursorUpload(params);
+  }
   if (params.mimeType.startsWith("image/")) {
     return compressImage(params);
   }
@@ -136,6 +142,33 @@ export async function compressUpload(params: {
     return compressAudio(params);
   }
   fail(400, "UNSUPPORTED_FILE_TYPE", "Unsupported file type");
+}
+
+function preserveCursorUpload(params: {
+  originalName: string;
+  mimeType: string;
+  body: Buffer;
+}): CompressedUpload {
+  const extension = extensionForMime(params.mimeType);
+  if (extension === "cur" && path.extname(params.originalName).toLowerCase() !== ".cur") {
+    fail(400, "UNSUPPORTED_CURSOR_TYPE", "Custom cursor icon files must use the .cur extension");
+  }
+  if (!["png", "gif", "cur"].includes(extension)) {
+    fail(400, "UNSUPPORTED_CURSOR_TYPE", "Custom cursors must be .cur, .gif, or .png files");
+  }
+  return compressedResult({
+    body: params.body,
+    mimeType: params.mimeType === "image/x-icon" ? "image/vnd.microsoft.icon" : params.mimeType,
+    originalName: params.originalName,
+    extension
+  });
+}
+
+function looksLikeCursorFile(buffer: Buffer, originalName: string): boolean {
+  const extension = path.extname(originalName).toLowerCase();
+  if (extension !== ".cur") return false;
+  if (buffer.length < 6) return false;
+  return buffer.readUInt16LE(0) === 0 && buffer.readUInt16LE(2) === 2 && buffer.readUInt16LE(4) > 0;
 }
 
 export async function writeObject(params: {
@@ -512,6 +545,8 @@ function extensionForMime(mimeType: string): string {
     "image/png": "png",
     "image/webp": "webp",
     "image/gif": "gif",
+    "image/vnd.microsoft.icon": "cur",
+    "image/x-icon": "cur",
     "video/mp4": "mp4",
     "video/webm": "webm",
     "audio/mpeg": "mp3",

@@ -3,7 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
   LayoutDashboard, PenTool, LayoutTemplate, BarChart3, Settings,
-  ShieldCheck, ChevronLeft, LogOut, ExternalLink, Sparkles, FolderOpen, Trophy,
+  ShieldCheck, ChevronLeft, LogOut, ExternalLink, Sparkles, FolderOpen, Trophy, Newspaper,
+  MessageCircle, MessagesSquare, Headphones,
 } from 'lucide-react';
 import { Logo } from '@/components/common/Logo';
 import { Button } from '@/components/ui/button';
@@ -24,10 +25,18 @@ export const NAV_ITEMS = [
   { to: '/dashboard/templates', label: 'Templates', icon: LayoutTemplate },
   { to: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
   { to: '/dashboard/files', label: 'Files', icon: FolderOpen },
+  { to: '/dashboard/messages', label: 'Messages', icon: MessageCircle },
+  { to: '/support', label: 'Support', icon: Headphones },
   { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
+  { to: '/blog', label: 'Blog', icon: Newspaper },
+  { to: '/forums', label: 'Forums', icon: MessagesSquare },
   { to: '/dashboard/settings', label: 'Settings', icon: Settings },
   { to: '/admin', label: 'Admin', icon: ShieldCheck, adminOnly: true },
 ];
+
+const MOBILE_NAV_ITEMS = NAV_ITEMS.filter((item) =>
+  ['/dashboard', '/dashboard/editor', '/dashboard/messages', '/support', '/dashboard/settings'].includes(item.to)
+);
 
 export const SidebarContent = ({ collapsed = false, onNavigate }) => {
   const navigate = useNavigate();
@@ -45,7 +54,7 @@ export const SidebarContent = ({ collapsed = false, onNavigate }) => {
     displayName: data?.profile?.displayName || authUser.displayName,
     avatar: data?.profile?.avatar || authUser.avatar,
   };
-  const navItems = NAV_ITEMS.filter((item) => !item.adminOnly || user.role === 'admin');
+  const navItems = NAV_ITEMS.filter((item) => !item.adminOnly || ['owner', 'admin'].includes(user.role));
 
   const handleLogout = async () => {
     await logout();
@@ -58,7 +67,7 @@ export const SidebarContent = ({ collapsed = false, onNavigate }) => {
         <Logo showText={!collapsed} />
       </div>
 
-      <nav className="flex-1 space-y-1 px-3 py-2">
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
         {navItems.map((item) => (
           <NavLink
             key={item.to}
@@ -145,3 +154,30 @@ export const Sidebar = () => {
     </aside>
   );
 };
+
+export const MobileBottomNav = () => (
+  <nav
+    className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 px-2 pt-2 backdrop-blur-xl lg:hidden"
+    style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0.5rem)' }}
+    aria-label="Dashboard navigation"
+  >
+    <div className="mx-auto grid max-w-md grid-cols-5 gap-1 rounded-2xl border border-border bg-secondary/20 p-1 shadow-soft">
+      {MOBILE_NAV_ITEMS.map((item) => (
+        <NavLink
+          key={item.to}
+          to={item.to}
+          end={item.end}
+          className={({ isActive }) =>
+            cn(
+              'flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1.5 py-2 text-[11px] font-medium transition-colors',
+              isActive ? 'bg-foreground text-background' : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'
+            )
+          }
+        >
+          <item.icon className="h-4 w-4 shrink-0" />
+          <span className="truncate">{item.label}</span>
+        </NavLink>
+      ))}
+    </div>
+  </nav>
+);

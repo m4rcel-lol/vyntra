@@ -14,7 +14,7 @@ const perkGroups = [
   {
     title: 'Profile design',
     icon: Palette,
-    perks: ['All profile layouts', 'Image, GIF, video, gradient, and solid backgrounds', 'Blur and dark overlays', 'Custom colors, fonts, buttons, badges, and card styling'],
+    perks: ['Focused minimal profile layout', 'Image, GIF, video, gradient, and solid backgrounds', 'Blur and dark overlays', 'Custom colors, fonts, buttons, badges, and card styling'],
   },
   {
     title: 'Effects and media',
@@ -22,14 +22,14 @@ const perkGroups = [
     perks: ['Particles, snow, rain, stars, sparkles, and shape effects', 'Click-to-enter intro screens', 'Custom cursor and cursor trail options', 'Background music player with loop and volume controls'],
   },
   {
-    title: 'Links and embeds',
+    title: 'Links and media',
     icon: Globe,
-    perks: ['Unlimited profile links', 'Built-in social icons', 'Custom link icons', 'YouTube, Twitch, Spotify, SoundCloud, Discord-style, and portfolio embeds'],
+    perks: ['Unlimited profile links', 'Built-in social icons', 'Custom link icons', 'Clean hover labels and click analytics'],
   },
   {
     title: 'Badges and identity',
     icon: BadgeCheck,
-    perks: ['Global badges', 'Custom user-created badges', 'Verified and Unlimited badge support', 'Badge colors, glow colors, icons, and tooltips'],
+    perks: ['Global staff-managed badges', 'Automatic Owner, Staff, and Moderator role badges', 'Verified and Unlimited badge support', 'Badge colors, glow colors, icons, and tooltips'],
   },
   {
     title: 'Templates',
@@ -61,7 +61,7 @@ const perkGroups = [
 const stats = [
   { value: '$0', label: 'Paid tiers' },
   { value: '100%', label: 'Features unlocked' },
-  { value: '10', label: 'Profile layouts' },
+  { value: '1', label: 'Minimal layout' },
   { value: 'Local', label: 'Compressed storage' },
 ];
 
@@ -101,7 +101,7 @@ export default function PerksPage() {
               transition={{ delay: 0.05 }}
               className="mx-auto mt-6 max-w-3xl font-display text-4xl font-semibold leading-tight tracking-tight sm:text-6xl"
             >
-              Every Vyntra.bio perk is included for every user.
+              Every Vyntra perk is included for every user.
             </motion.h1>
             <motion.p
               initial={{ opacity: 0, y: 16 }}

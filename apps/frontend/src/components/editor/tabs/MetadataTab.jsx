@@ -21,7 +21,7 @@ export const MetadataTab = () => {
         <div className="overflow-hidden rounded-xl border border-border">
           {meta.ogImage && <img src={meta.ogImage} alt="" className="h-36 w-full object-cover" />}
           <div className="bg-secondary/30 p-3">
-            <p className="text-xs uppercase text-muted-foreground">vyntra.bio/{profile.username}</p>
+            <p className="text-xs uppercase text-muted-foreground">vyntra.sarl/{profile.username}</p>
             <p className="truncate text-sm font-semibold">{meta.title}</p>
             <p className="line-clamp-2 text-xs text-muted-foreground">{meta.description}</p>
           </div>

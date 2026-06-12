@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -11,6 +12,7 @@ enum UserRole {
   USER
   MODERATOR
   ADMIN
+  OWNER
 }
 
 enum AnalyticsEventType {
@@ -51,6 +53,19 @@ enum ReportStatus {
   DISMISSED
 }
 
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
+}
+
+enum SupportConversationStatus {
+  BOT
+  WAITING_FOR_STAFF
+  ACTIVE
+  CLOSED
+}
+
 model User {
   id           String    @id @default(cuid())
   username     String    @unique
@@ -63,31 +78,44 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  profile             Profile?
-  sessions            Session[]
-  files               FileAsset[]
-  ownedBadges         Badge[]         @relation("OwnedBadges")
-  assignedBadges      UserBadge[]     @relation("AssignedBadges")
-  templates           Template[]
-  templateLikes       TemplateLike[]
-  reports             Report[]        @relation("ReporterReports")
-  reviewedReports     Report[]        @relation("ReviewerReports")
-  auditLogs           AdminAuditLog[] @relation("ActorAuditLogs")
-  reservedUsernames   ReservedUsername[]
-  announcements       Announcement[]
+  profile                      Profile?
+  sessions                     Session[]
+  files                        FileAsset[]
+  ownedBadges                  Badge[]               @relation("OwnedBadges")
+  assignedBadges               UserBadge[]           @relation("AssignedBadges")
+  templates                    Template[]
+  templateLikes                TemplateLike[]
+  reports                      Report[]              @relation("ReporterReports")
+  reviewedReports              Report[]              @relation("ReviewerReports")
+  auditLogs                    AdminAuditLog[]       @relation("ActorAuditLogs")
+  reservedUsernames            ReservedUsername[]
+  announcements                Announcement[]
+  blogPosts                    BlogPost[]            @relation("BlogAuthor")
+  blogLikes                    BlogPostLike[]
+  sentFriendships              Friendship[]          @relation("FriendshipRequester")
+  receivedFriendships          Friendship[]          @relation("FriendshipAddressee")
+  directConversationsA         DirectConversation[]  @relation("DirectConversationUserA")
+  directConversationsB         DirectConversation[]  @relation("DirectConversationUserB")
+  sentMessages                 DirectMessage[]       @relation("DirectMessageSender")
+  notifications                Notification[]
+  forumThreads                 ForumThread[]         @relation("ForumThreadAuthor")
+  forumPosts                   ForumPost[]           @relation("ForumPostAuthor")
+  supportConversations         SupportConversation[] @relation("SupportConversationRequester")
+  assignedSupportConversations SupportConversation[] @relation("SupportConversationAssignee")
+  supportMessages              SupportMessage[]      @relation("SupportMessageAuthor")
 }
 
 model Session {
-  id          String    @id @default(cuid())
-  userId      String
-  tokenHash   String    @unique
-  csrfToken   String
-  userAgent   String?
-  ipHash      String?
-  expiresAt   DateTime
-  revokedAt   DateTime?
-  createdAt   DateTime  @default(now())
-  lastSeenAt  DateTime  @default(now())
+  id         String    @id @default(cuid())
+  userId     String
+  tokenHash  String    @unique
+  csrfToken  String
+  userAgent  String?
+  ipHash     String?
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -96,64 +124,64 @@ model Session {
 }
 
 model Profile {
-  id                String   @id @default(cuid())
-  uid               Int      @unique @default(autoincrement())
-  userId            String   @unique
-  displayName       String
-  bio               String   @default("")
-  location          String   @default("")
-  layout            String   @default("centered-glass")
-  statusText        String   @default("Creating something memorable")
-  discordPresence   Json     @default("{}")
-  musicActivity     Json     @default("{}")
-  theme             Json     @default("{}")
-  effects           Json     @default("{}")
-  metadata          Json     @default("{}")
-  embeds            Json     @default("[]")
-  customCss         String   @default("")
-  sanitizedCss      String   @default("")
-  clickToEnter      Boolean  @default(false)
-  viewCount         Int      @default(0)
-  aliasSlug         String?  @unique
-  isPublic          Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id              String   @id @default(cuid())
+  uid             Int      @unique @default(autoincrement())
+  userId          String   @unique
+  displayName     String
+  bio             String   @default("")
+  location        String   @default("")
+  layout          String   @default("minimal-text")
+  statusText      String   @default("")
+  discordPresence Json     @default("{}")
+  musicActivity   Json     @default("{}")
+  theme           Json     @default("{}")
+  effects         Json     @default("{}")
+  metadata        Json     @default("{}")
+  embeds          Json     @default("[]")
+  customCss       String   @default("")
+  sanitizedCss    String   @default("")
+  clickToEnter    Boolean  @default(false)
+  viewCount       Int      @default(0)
+  aliasSlug       String?  @unique
+  isPublic        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  avatarFileId      String?
-  bannerFileId      String?
-  backgroundFileId  String?
-  audioFileId       String?
-  cursorFileId      String?
-  metadataFileId    String?
+  avatarFileId     String?
+  bannerFileId     String?
+  backgroundFileId String?
+  audioFileId      String?
+  cursorFileId     String?
+  metadataFileId   String?
 
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  links      Link[]
-  badges     UserBadge[]
-  files      FileAsset[]
-  views      ProfileView[]
-  clicks     LinkClick[]
-  events     AnalyticsEvent[]
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  links  Link[]
+  badges UserBadge[]
+  files  FileAsset[]
+  views  ProfileView[]
+  clicks LinkClick[]
+  events AnalyticsEvent[]
 
   @@index([isPublic])
   @@index([createdAt])
 }
 
 model Link {
-  id          String   @id @default(cuid())
-  profileId   String
-  title       String
-  url         String
-  kind        String   @default("website")
-  order       Int      @default(0)
-  isVisible   Boolean  @default(true)
-  clickCount  Int      @default(0)
-  style       Json     @default("{}")
-  iconFileId  String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  profileId  String
+  title      String
+  url        String
+  kind       String   @default("website")
+  order      Int      @default(0)
+  isVisible  Boolean  @default(true)
+  clickCount Int      @default(0)
+  style      Json     @default("{}")
+  iconFileId String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  profile Profile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  icon    FileAsset? @relation("LinkIcon", fields: [iconFileId], references: [id], onDelete: SetNull)
+  profile Profile     @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  icon    FileAsset?  @relation("LinkIcon", fields: [iconFileId], references: [id], onDelete: SetNull)
   clicks  LinkClick[]
 
   @@index([profileId, order])
@@ -173,9 +201,9 @@ model Badge {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  owner       User?       @relation("OwnedBadges", fields: [ownerUserId], references: [id], onDelete: Cascade)
-  icon        FileAsset?  @relation("BadgeIcon", fields: [iconFileId], references: [id], onDelete: SetNull)
-  userBadges  UserBadge[]
+  owner      User?       @relation("OwnedBadges", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  icon       FileAsset?  @relation("BadgeIcon", fields: [iconFileId], references: [id], onDelete: SetNull)
+  userBadges UserBadge[]
 
   @@index([isGlobal])
   @@index([ownerUserId])
@@ -235,29 +263,30 @@ model TemplateLike {
 }
 
 model FileAsset {
-  id           String        @id @default(cuid())
-  publicId     String        @unique @default(uuid())
-  ownerUserId  String
-  profileId    String?
-  kind         FileAssetKind @default(OTHER)
-  storageDriver String       @default("local")
-  objectKey    String        @unique
-  originalName String
-  safeName     String
-  mimeType     String
-  sizeBytes    Int
-  checksum     String?
-  metadata     Json         @default("{}")
-  isPublic     Boolean       @default(true)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  deletedAt    DateTime?
+  id            String        @id @default(cuid())
+  publicId      String        @unique @default(uuid())
+  ownerUserId   String
+  profileId     String?
+  kind          FileAssetKind @default(OTHER)
+  storageDriver String        @default("local")
+  objectKey     String        @unique
+  originalName  String
+  safeName      String
+  mimeType      String
+  sizeBytes     Int
+  checksum      String?
+  metadata      Json          @default("{}")
+  isPublic      Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  deletedAt     DateTime?
 
   owner            User       @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
   profile          Profile?   @relation(fields: [profileId], references: [id], onDelete: SetNull)
   linkIcons        Link[]     @relation("LinkIcon")
   badgeIcons       Badge[]    @relation("BadgeIcon")
   templatePreviews Template[] @relation("TemplatePreview")
+  messageAttachments DirectMessage[] @relation("DirectMessageAttachment")
 
   @@index([ownerUserId, kind])
   @@index([profileId])
@@ -297,9 +326,9 @@ model ProfileView {
 
   profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
+  @@unique([profileId, visitorHash])
   @@index([profileId, createdAt])
   @@index([profileId, visitorHash])
-  @@unique([profileId, visitorHash])
 }
 
 model LinkClick {
@@ -381,4 +410,193 @@ model Announcement {
   createdBy User? @relation(fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([isActive, startsAt, endsAt])
+}
+
+model BlogPost {
+  id              String    @id @default(cuid())
+  authorUserId    String
+  slug            String    @unique
+  title           String
+  excerpt         String    @default("")
+  contentMarkdown String
+  isPublished     Boolean   @default(true)
+  isPinned        Boolean   @default(false)
+  likeCount       Int       @default(0)
+  publishedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  author User           @relation("BlogAuthor", fields: [authorUserId], references: [id], onDelete: Cascade)
+  likes  BlogPostLike[]
+
+  @@index([isPublished, isPinned, publishedAt])
+  @@index([authorUserId, createdAt])
+}
+
+model BlogPostLike {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  post BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([userId, createdAt])
+}
+
+model Friendship {
+  id          String           @id @default(cuid())
+  requesterId String
+  addresseeId String
+  pairKey     String           @unique
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  requester User @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee User @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@index([requesterId, status])
+  @@index([addresseeId, status])
+}
+
+model DirectConversation {
+  id        String   @id @default(cuid())
+  pairKey   String   @unique
+  userAId   String
+  userBId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages DirectMessage[]
+  userA    User            @relation("DirectConversationUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB    User            @relation("DirectConversationUserB", fields: [userBId], references: [id], onDelete: Cascade)
+
+  @@index([userAId])
+  @@index([userBId])
+}
+
+model DirectMessage {
+  id             String    @id @default(cuid())
+  conversationId String
+  senderId       String
+  body           String
+  replyToMessageId String?
+  attachmentFileId String?
+  readAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  conversation DirectConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User               @relation("DirectMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  replyTo      DirectMessage?     @relation("DirectMessageReplies", fields: [replyToMessageId], references: [id], onDelete: SetNull)
+  replies      DirectMessage[]    @relation("DirectMessageReplies")
+  attachment   FileAsset?         @relation("DirectMessageAttachment", fields: [attachmentFileId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId, createdAt])
+  @@index([senderId, createdAt])
+  @@index([replyToMessageId])
+  @@index([attachmentFileId])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String    @default("")
+  url       String    @default("")
+  imageUrl  String    @default("")
+  readAt    DateTime?
+  clearedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, clearedAt, createdAt])
+}
+
+model ForumCategory {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String   @default("")
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  threads ForumThread[]
+
+  @@index([order])
+}
+
+model ForumThread {
+  id           String   @id @default(cuid())
+  categoryId   String
+  authorUserId String
+  title        String
+  slug         String   @unique
+  bodyMarkdown String
+  isPinned     Boolean  @default(false)
+  isLocked     Boolean  @default(false)
+  replyCount   Int      @default(0)
+  viewCount    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  category ForumCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  author   User          @relation("ForumThreadAuthor", fields: [authorUserId], references: [id], onDelete: Cascade)
+  posts    ForumPost[]
+
+  @@index([categoryId, isPinned, updatedAt])
+  @@index([authorUserId, createdAt])
+}
+
+model ForumPost {
+  id           String   @id @default(cuid())
+  threadId     String
+  authorUserId String
+  bodyMarkdown String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  thread ForumThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  author User        @relation("ForumPostAuthor", fields: [authorUserId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
+  @@index([authorUserId, createdAt])
+}
+
+model SupportConversation {
+  id              String                    @id @default(cuid())
+  requesterUserId String
+  assignedStaffId String?
+  subject         String                    @default("Support request")
+  status          SupportConversationStatus @default(BOT)
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+  closedAt        DateTime?
+
+  requester     User             @relation("SupportConversationRequester", fields: [requesterUserId], references: [id], onDelete: Cascade)
+  assignedStaff User?            @relation("SupportConversationAssignee", fields: [assignedStaffId], references: [id], onDelete: SetNull)
+  messages      SupportMessage[]
+
+  @@index([requesterUserId, updatedAt])
+  @@index([assignedStaffId, status])
+  @@index([status, updatedAt])
+}
+
+model SupportMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  authorUserId   String?
+  authorRole     String   @default("BOT")
+  body           String
+  createdAt      DateTime @default(now())
+
+  conversation SupportConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  author       User?               @relation("SupportMessageAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId, createdAt])
 }

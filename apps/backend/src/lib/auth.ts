@@ -1,7 +1,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type { PrismaClient, UserRole } from "@prisma/client";
 import type { Redis } from "ioredis";
-import { env, isProduction } from "../env.js";
+import { env, secureCookies } from "../env.js";
 import type { AuthSession, AuthUser } from "../types.js";
 import { constantTimeEqual, createCsrfToken, createSessionToken, hashIp, sha256 } from "./crypto.js";
 import { fail } from "./errors.js";
@@ -18,7 +18,7 @@ function sessionCookieOptions(expires?: Date) {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: isProduction,
+    secure: secureCookies,
     path: "/",
     ...(expires ? { expires } : {})
   };
@@ -59,7 +59,7 @@ export function clearSessionCookie(reply: FastifyReply): void {
     path: "/",
     httpOnly: true,
     sameSite: "lax",
-    secure: isProduction
+    secure: secureCookies
   });
 }
 
@@ -129,7 +129,7 @@ export function requireUser(request: FastifyRequest): AuthUser {
 
 export function requireRole(request: FastifyRequest, roles: UserRole[]): AuthUser {
   const user = requireUser(request);
-  if (!roles.includes(user.role)) {
+  if (user.role !== "OWNER" && !roles.includes(user.role)) {
     fail(403, "FORBIDDEN", "You do not have permission to perform this action");
   }
   return user;

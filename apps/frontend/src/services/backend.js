@@ -190,6 +190,214 @@ export const templateApi = {
   },
 };
 
+export const blogApi = {
+  async list() {
+    const result = await api('/api/blog');
+    return {
+      posts: (result.posts ?? []).map(mapBlogPost),
+      canManage: !!result.canManage,
+    };
+  },
+
+  async get(slug) {
+    const result = await api(`/api/blog/${encodeURIComponent(slug)}`);
+    return {
+      post: mapBlogPost(result.post),
+      canManage: !!result.canManage,
+    };
+  },
+
+  async create(payload) {
+    const result = await api('/api/blog', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return mapBlogPost(result.post);
+  },
+
+  async update(id, payload) {
+    const result = await api(`/api/blog/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+    return mapBlogPost(result.post);
+  },
+
+  async remove(id) {
+    return api(`/api/blog/${id}`, { method: 'DELETE' });
+  },
+
+  async toggleLike(id) {
+    return api(`/api/blog/${id}/like`, { method: 'POST' });
+  },
+
+  async pin(id, isPinned) {
+    const result = await api(`/api/blog/${id}/pin`, {
+      method: 'POST',
+      body: JSON.stringify({ isPinned }),
+    });
+    return mapBlogPost(result.post);
+  },
+};
+
+export const notificationApi = {
+  async list() {
+    const result = await api('/api/notifications');
+    return result.notifications ?? [];
+  },
+
+  async clear() {
+    return api('/api/notifications/clear', { method: 'POST' });
+  },
+
+  async markRead(id) {
+    return api(`/api/notifications/${id}/read`, { method: 'PATCH' });
+  },
+};
+
+export const socialApi = {
+  async myFriends() {
+    const result = await api('/api/friends/me');
+    return {
+      friends: (result.friends ?? []).map(mapSocialUser),
+      incomingCount: result.incomingCount ?? 0,
+      outgoingCount: result.outgoingCount ?? 0,
+    };
+  },
+
+  async publicFriends(username) {
+    const result = await api(`/api/users/${encodeURIComponent(username)}/friends`);
+    return {
+      count: result.count ?? 0,
+      state: result.state ?? 'guest',
+      friends: (result.friends ?? []).map(mapSocialUser),
+    };
+  },
+
+  async addFriend(username) {
+    return api(`/api/users/${encodeURIComponent(username)}/friend`, { method: 'POST' });
+  },
+
+  async removeFriend(username) {
+    return api(`/api/users/${encodeURIComponent(username)}/friend`, { method: 'DELETE' });
+  },
+
+  async conversations() {
+    const result = await api('/api/messages/conversations');
+    return (result.conversations ?? []).map(mapConversationSummary);
+  },
+
+  async conversation(id) {
+    const result = await api(`/api/messages/conversations/${id}`);
+    return {
+      conversation: {
+        ...result.conversation,
+        friend: mapSocialUser(result.conversation?.friend),
+      },
+      messages: (result.messages ?? []).map(mapDirectMessage),
+    };
+  },
+
+  async sendMessage(username, payload) {
+    const messagePayload = typeof payload === 'string' ? { body: payload } : payload;
+    const result = await api(`/api/messages/${encodeURIComponent(username)}`, {
+      method: 'POST',
+      body: JSON.stringify(messagePayload),
+    });
+    return {
+      conversationId: result.conversationId,
+      message: mapDirectMessage(result.message),
+    };
+  },
+};
+
+export const forumApi = {
+  async list() {
+    const result = await api('/api/forums');
+    return (result.categories ?? []).map((category) => ({
+      ...category,
+      threads: (category.threads ?? []).map(mapForumThread),
+    }));
+  },
+
+  async createThread(payload) {
+    const result = await api('/api/forums/threads', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return mapForumDetail(result);
+  },
+
+  async getThread(slug) {
+    const result = await api(`/api/forums/threads/${encodeURIComponent(slug)}`);
+    return mapForumDetail(result);
+  },
+
+  async reply(threadId, bodyMarkdown) {
+    const result = await api(`/api/forums/threads/${threadId}/replies`, {
+      method: 'POST',
+      body: JSON.stringify({ bodyMarkdown }),
+    });
+    return { post: mapForumPost(result.post) };
+  },
+
+  async updateThread(id, patch) {
+    const result = await api(`/api/forums/threads/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    });
+    return mapForumDetail(result);
+  },
+};
+
+export const supportApi = {
+  async myConversations() {
+    const result = await api('/api/support/conversations/me');
+    return (result.conversations ?? []).map(mapSupportConversation);
+  },
+
+  async adminConversations() {
+    const result = await api('/api/admin/support/conversations');
+    return (result.conversations ?? []).map(mapSupportConversation);
+  },
+
+  async create(payload) {
+    const result = await api('/api/support/conversations', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return mapSupportConversation(result.conversation);
+  },
+
+  async get(id) {
+    const result = await api(`/api/support/conversations/${id}`);
+    return mapSupportConversation(result.conversation);
+  },
+
+  async sendMessage(id, body) {
+    const result = await api(`/api/support/conversations/${id}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    });
+    return mapSupportConversation(result.conversation);
+  },
+
+  async escalate(id) {
+    const result = await api(`/api/support/conversations/${id}/escalate`, { method: 'POST' });
+    return mapSupportConversation(result.conversation);
+  },
+
+  async accept(id) {
+    const result = await api(`/api/support/conversations/${id}/accept`, { method: 'POST' });
+    return mapSupportConversation(result.conversation);
+  },
+
+  async close(id) {
+    const result = await api(`/api/support/conversations/${id}/close`, { method: 'POST' });
+    return mapSupportConversation(result.conversation);
+  },
+};
+
 export const filesApi = {
   async list() {
     const result = await api('/api/files');
@@ -351,15 +559,16 @@ function mapProfileResponse(response) {
   const theme = asObject(profile.theme);
   const effects = asObject(profile.effects);
   const metadata = asObject(profile.metadata);
-  const embeds = Array.isArray(profile.embeds) ? profile.embeds : [];
   const username = profile.username;
   const avatar = assets.avatar?.url || fallbackAvatar(username);
   const banner = assets.banner?.url || ABSTRACT.fluid2;
   const backgroundAsset = assets.background;
   const isVideo = backgroundAsset?.mimeType?.startsWith?.('video/');
+  const isGif = backgroundAsset?.mimeType === 'image/gif';
   const backgroundUrl = backgroundAsset?.url || assets.banner?.url || '';
   const accent = hexToHsl(theme.accentColor || '#ffffff');
-  const particles = effects.particles || 'stars';
+  const particleMode = normalizeParticleMode(effects.particles);
+  const cursorTrailMode = normalizeCursorTrail(effects.cursorTrail);
   const musicActivity = asObject(profile.musicActivity);
   const audioMetadata = asObject(assets.audio?.metadata);
   const embeddedCover = asObject(audioMetadata.cover);
@@ -376,33 +585,33 @@ function mapProfileResponse(response) {
     displayName: profile.displayName || username,
     bio: profile.bio || '',
     location: profile.location || '',
-    status: profile.statusText || 'Creating something memorable',
+    status: '',
     avatar,
     banner,
     joinDate: profile.joinedAt || profile.createdAt || new Date().toISOString(),
     uid: String(profile.uid ?? '').padStart(7, '0'),
     views: profile.viewCount ?? 0,
     accent,
-    layout: mapLayout(profile.layout),
-    background: {
-      type: isVideo ? 'video' : backgroundUrl ? 'image' : 'gradient',
-      color: '0 0% 4%',
-      gradient: 'linear-gradient(135deg, #050505 0%, #111111 50%, #050505 100%)',
-      image: isVideo ? banner : backgroundUrl,
-      video: isVideo ? backgroundUrl : '',
-      blur: effects.blurOverlay ? 4 : 0,
-      overlay: Math.round((Number(effects.darkOverlay ?? 0.45)) * 100),
-    },
+    layout: 'minimal',
+    background: mapProfileBackground({ effects, backgroundAsset, backgroundUrl, banner, isVideo, isGif }),
     effects: {
       glowBorder: theme.borderGlow !== false,
       floating: effects.hoverAnimation !== 'none',
-      particles: particles !== 'none' && particles !== 'snow' && particles !== 'rain' && particles !== 'stars',
-      snow: particles === 'snow',
-      rain: particles === 'rain',
-      stars: particles === 'stars' || !particles,
-      cursorTrail: effects.cursorTrail && effects.cursorTrail !== 'none',
+      particles: ['sparkles', 'bubbles', 'shapes'].includes(particleMode),
+      particleMode,
+      particleDensity: clampNumber(effects.particleDensity, 10, 90, 32),
+      particleSpeed: clampNumber(effects.particleSpeed, 0.5, 2, 1),
+      effectIntensity: clampNumber(effects.effectIntensity, 0.2, 1, 0.7),
+      snow: particleMode === 'snow',
+      rain: particleMode === 'rain',
+      stars: particleMode === 'stars',
+      cursorTrail: cursorTrailMode !== 'none',
+      cursorTrailMode,
       clickToEnter: !!profile.clickToEnter,
       pageEntrance: effects.entranceAnimation !== 'none',
+      entranceAnimation: effects.entranceAnimation || 'scale',
+      hoverAnimation: effects.hoverAnimation || 'lift',
+      backgroundAnimation: effects.backgroundAnimation || 'none',
     },
     links: (response.links ?? []).map(mapLink),
     badges: (response.badges ?? []).map(mapBadge),
@@ -416,18 +625,11 @@ function mapProfileResponse(response) {
       volume: Number.isFinite(Number(musicActivity.volume)) ? Math.max(0, Math.min(100, Number(musicActivity.volume))) : 45,
       src: audioUrl,
     },
-    embeds: {
-      youtube: findEmbed(embeds, 'youtube'),
-      twitch: findEmbed(embeds, 'twitch'),
-      spotify: findEmbed(embeds, 'spotify'),
-      soundcloud: findEmbed(embeds, 'soundcloud'),
-      discordActivity: true,
-      portfolioCard: profile.layout === 'portfolio-grid',
-    },
+    embeds: {},
     metadata: {
-      title: metadata.title || `${profile.displayName || username} · Vyntra.bio`,
-      description: metadata.description || profile.bio || 'A creator profile on Vyntra.bio',
-      ogImage: assets.metadata?.url || banner,
+      title: metadata.title || `${profile.displayName || username} · Vyntra`,
+      description: metadata.description || profile.bio || 'A creator profile on Vyntra',
+      ogImage: assets.metadata?.url || metadata.ogImage || '',
     },
     advanced: {
       customCss: profile.sanitizedCss || '',
@@ -435,18 +637,6 @@ function mapProfileResponse(response) {
       visibility: profile.isPublic === false ? 'private' : 'public',
       seo: true,
     },
-    discordActivity: {
-      username,
-      status: 'online',
-      activity: profile.statusText || 'On Vyntra.bio',
-      avatar,
-    },
-    spotifyActivity: hasMusic ? {
-      track: musicTitle,
-      artist: musicArtist,
-      cover: musicCover,
-      progress: Number.isFinite(Number(musicActivity.progress)) ? Math.max(0, Math.min(100, Number(musicActivity.progress))) : 42,
-    } : null,
     assetIds: {
       avatarFileId: assets.avatar?.id ?? null,
       bannerFileId: assets.banner?.id ?? null,
@@ -464,7 +654,6 @@ function profileToPatch(profile) {
     displayName: profile.displayName,
     bio: profile.bio,
     location: profile.location,
-    statusText: profile.status,
     musicActivity: profile.music ? {
       title: profile.music.title || '',
       artist: profile.music.artist || '',
@@ -473,7 +662,7 @@ function profileToPatch(profile) {
       loop: profile.music.loop !== false,
       volume: Math.max(0, Math.min(100, Number(profile.music.volume ?? 45))),
     } : undefined,
-    layout: unmapLayout(profile.layout),
+    layout: 'minimal-text',
     clickToEnter: !!profile.effects?.clickToEnter,
     isPublic: profile.advanced?.visibility !== 'private',
     theme: {
@@ -501,7 +690,7 @@ function profileToPatch(profile) {
       title: profile.metadata?.title,
       description: profile.metadata?.description,
     },
-    embeds: profileToEmbeds(profile),
+    embeds: [],
     customCss: profile.advanced?.customCss ?? '',
     avatarFileId: assetIdPatchValue(profile, 'avatarFileId'),
     bannerFileId: assetIdPatchValue(profile, 'bannerFileId'),
@@ -517,26 +706,18 @@ function assetIdPatchValue(profile, key) {
   return value === undefined ? undefined : value;
 }
 
-function profileToEmbeds(profile) {
-  const entries = [];
-  for (const type of ['youtube', 'twitch', 'spotify', 'soundcloud']) {
-    const value = profile.embeds?.[type];
-    if (value) {
-      const url = /^https?:\/\//.test(value) ? value : `https://example.com/${type}/${encodeURIComponent(value)}`;
-      entries.push({ type, title: type, url });
-    }
-  }
-  return entries;
-}
-
 function mapLink(link) {
   const kind = String(link.kind || 'website').toLowerCase();
+  const style = typeof link.style === 'string' ? link.style : asObject(link.style).style;
+  const label = link.label || link.title || 'Link';
   return {
     id: link.id,
-    label: link.title || 'Link',
+    label,
+    title: label,
     url: link.url,
-    icon: kindToIcon(kind, link.title),
-    style: asObject(link.style).style || 'glass',
+    icon: link.iconName || kindToIcon(kind, label),
+    iconUrl: link.icon?.url || link.iconUrl || '',
+    style: style || 'glass',
     clicks: link.clickCount ?? 0,
     isVisible: link.isVisible !== false,
   };
@@ -619,11 +800,144 @@ function mapTemplate(template) {
     style: capitalize(template.style || 'dark'),
     preview: template.preview?.url || WALLPAPERS.mesh2,
     accent: '0 0% 90%',
-    layout: 'centered',
+    layout: 'minimal',
     uses: template.importCount ?? 0,
     likes: template.likeCount ?? 0,
     tags: template.tags ?? [template.style || 'dark'],
     description: template.description,
+  };
+}
+
+function mapBlogPost(post) {
+  const authorUsername = post.author?.username || 'staff';
+  return {
+    id: post.id,
+    slug: post.slug,
+    title: post.title || 'Untitled post',
+    excerpt: post.excerpt || '',
+    contentMarkdown: post.contentMarkdown || '',
+    isPublished: post.isPublished !== false,
+    isPinned: !!post.isPinned,
+    likeCount: post.likeCount ?? 0,
+    likedByMe: !!post.likedByMe,
+    publishedAt: post.publishedAt || post.createdAt,
+    createdAt: post.createdAt,
+    updatedAt: post.updatedAt,
+    author: {
+      id: post.author?.id || authorUsername,
+      username: authorUsername,
+      role: String(post.author?.role || 'ADMIN').toLowerCase(),
+      displayName: post.author?.displayName || authorUsername,
+      avatar: post.author?.avatar?.url || fallbackAvatar(authorUsername),
+    },
+  };
+}
+
+function mapSocialUser(user = {}) {
+  const username = user.username || 'user';
+  return {
+    id: user.id || username,
+    username,
+    role: String(user.role || 'USER').toLowerCase(),
+    displayName: user.displayName || username,
+    profileId: user.profileId || null,
+    uid: user.uid ?? null,
+    avatar: user.avatar?.url || fallbackAvatar(username),
+  };
+}
+
+function mapConversationSummary(conversation = {}) {
+  return {
+    id: conversation.id,
+    friend: mapSocialUser(conversation.friend),
+    lastMessage: conversation.lastMessage ? mapDirectMessage(conversation.lastMessage) : null,
+    updatedAt: conversation.updatedAt,
+  };
+}
+
+function mapDirectMessage(message = {}) {
+  return {
+    id: message.id,
+    body: message.body || '',
+    readAt: message.readAt || null,
+    createdAt: message.createdAt,
+    sender: mapSocialUser(message.sender),
+    attachment: message.attachment ? mapAsset(message.attachment) : null,
+    replyTo: message.replyTo ? {
+      id: message.replyTo.id,
+      body: message.replyTo.body || '',
+      createdAt: message.replyTo.createdAt,
+      sender: mapSocialUser(message.replyTo.sender),
+      attachment: message.replyTo.attachment ? mapAsset(message.replyTo.attachment) : null,
+    } : null,
+  };
+}
+
+function mapAsset(asset = {}) {
+  return {
+    id: asset.id,
+    publicId: asset.publicId,
+    url: asset.url,
+    mimeType: asset.mimeType || 'application/octet-stream',
+    kind: String(asset.kind || 'OTHER').toLowerCase(),
+    originalName: asset.originalName || 'Attachment',
+    sizeBytes: asset.sizeBytes ?? 0,
+    metadata: asset.metadata || {},
+  };
+}
+
+function mapForumThread(thread = {}) {
+  return {
+    id: thread.id,
+    slug: thread.slug,
+    title: thread.title || 'Untitled thread',
+    excerpt: thread.excerpt || '',
+    bodyMarkdown: thread.bodyMarkdown || '',
+    isPinned: !!thread.isPinned,
+    isLocked: !!thread.isLocked,
+    replyCount: thread.replyCount ?? 0,
+    viewCount: thread.viewCount ?? 0,
+    createdAt: thread.createdAt,
+    updatedAt: thread.updatedAt,
+    category: thread.category,
+    author: mapSocialUser(thread.author),
+  };
+}
+
+function mapForumPost(post = {}) {
+  return {
+    id: post.id,
+    bodyMarkdown: post.bodyMarkdown || '',
+    createdAt: post.createdAt,
+    updatedAt: post.updatedAt,
+    author: mapSocialUser(post.author),
+  };
+}
+
+function mapForumDetail(result = {}) {
+  return {
+    thread: mapForumThread(result.thread),
+    posts: (result.posts ?? []).map(mapForumPost),
+  };
+}
+
+function mapSupportConversation(conversation = {}) {
+  return {
+    id: conversation.id,
+    subject: conversation.subject || 'Support request',
+    status: String(conversation.status || 'BOT').toLowerCase(),
+    createdAt: conversation.createdAt,
+    updatedAt: conversation.updatedAt,
+    closedAt: conversation.closedAt || null,
+    requester: mapSocialUser(conversation.requester),
+    assignedStaff: conversation.assignedStaff ? mapSocialUser(conversation.assignedStaff) : null,
+    messages: (conversation.messages ?? []).map((message) => ({
+      id: message.id,
+      authorRole: String(message.authorRole || 'BOT').toLowerCase(),
+      body: message.body || '',
+      createdAt: message.createdAt,
+      author: message.author ? mapSocialUser(message.author) : null,
+    })),
   };
 }
 
@@ -659,7 +973,7 @@ function mapLayout(layout) {
     case 'spotlight': return 'spotlight';
     case 'stacked-links': return 'stacked';
     case 'editorial': return 'editorial';
-    default: return 'centered';
+    default: return 'minimal';
   }
 }
 
@@ -674,7 +988,7 @@ function unmapLayout(layout) {
     case 'spotlight': return 'spotlight';
     case 'stacked': return 'stacked-links';
     case 'editorial': return 'editorial';
-    default: return 'centered-glass';
+    default: return 'minimal-text';
   }
 }
 
@@ -707,17 +1021,6 @@ function badgeToIcon(input) {
   if (value.includes('gamer')) return 'Gamepad2';
   if (value.includes('unlimited')) return 'Infinity';
   return 'Star';
-}
-
-function findEmbed(embeds, type) {
-  const embed = embeds.find((item) => item.type === type);
-  if (!embed?.url) return '';
-  try {
-    const url = new URL(embed.url);
-    return url.pathname.split('/').filter(Boolean).pop() || embed.url;
-  } catch {
-    return embed.url;
-  }
 }
 
 function asObject(value) {

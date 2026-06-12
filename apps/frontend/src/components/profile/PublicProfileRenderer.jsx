@@ -4,15 +4,21 @@ import { ProfileBackground } from './ProfileBackground';
 import { ProfileEffects } from './ProfileEffects';
 import { IntroScreen } from './IntroScreen';
 import { MusicPlayer } from './MusicPlayer';
-import { LAYOUTS, CenteredLayout } from './layouts';
+import { MinimalLayout } from './layouts';
 import { cn } from '@/lib/utils';
+
+const cursorCssValue = (url) => {
+  const cleanUrl = String(url || '').trim().replace(/["\\\n\r]/g, '');
+  if (!cleanUrl) return undefined;
+  return `url("${cleanUrl}") 16 16, auto`;
+};
 
 /**
  * Full profile renderer used by the public page (full screen) and the editor
  * live preview (`preview`). Handles background, effects, click-to-enter intro,
  * background music and safely-simulated custom CSS / cursor.
  */
-export const PublicProfileRenderer = ({ profile, preview = false, forceEntered = false, className }) => {
+export const PublicProfileRenderer = ({ profile, preview = false, forceEntered = false, className, social }) => {
   const needIntro = !!profile.effects?.clickToEnter && !forceEntered;
   const [entered, setEntered] = useState(!needIntro);
   const [viaClick, setViaClick] = useState(false);
@@ -23,15 +29,20 @@ export const PublicProfileRenderer = ({ profile, preview = false, forceEntered =
     setViaClick(false);
   }, [needIntro, profile.id]);
 
-  const Layout = LAYOUTS[profile.layout] || CenteredLayout;
-  const cursor = profile.advanced?.customCursor ? `url(${profile.advanced.customCursor}), auto` : undefined;
+  const cursor = cursorCssValue(profile.advanced?.customCursor);
 
   return (
     <div
       className={cn('relative isolate w-full overflow-hidden', preview ? 'h-full' : 'min-h-screen', className)}
-      style={{ cursor }}
+      style={cursor ? { '--vyntra-custom-cursor': cursor } : undefined}
+      data-vyntra-custom-cursor={cursor ? '' : undefined}
       data-testid="public-profile"
     >
+      {cursor && (
+        <style>
+          {'[data-vyntra-custom-cursor], [data-vyntra-custom-cursor] * { cursor: var(--vyntra-custom-cursor) !important; }'}
+        </style>
+      )}
       <ProfileBackground background={profile.background} />
       {/* readability vignette */}
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(120%_120%_at_50%_0%,transparent_40%,rgba(0,0,0,0.55)_100%)]" />
@@ -42,8 +53,14 @@ export const PublicProfileRenderer = ({ profile, preview = false, forceEntered =
         )}
       </AnimatePresence>
 
-      <div className={cn('relative z-10 flex w-full items-center justify-center px-4', preview ? 'min-h-full py-10' : 'min-h-screen py-16')}>
-        {entered && <Layout profile={profile} />}
+      <div
+        className={cn(
+          'relative z-10 flex w-full items-center justify-center px-3 sm:px-4',
+          preview ? 'min-h-full py-8 sm:py-10' : 'min-h-screen py-12',
+          !preview && profile.music?.enabled && profile.music?.src ? 'pb-36 sm:pb-16' : ''
+        )}
+      >
+        {entered && <MinimalLayout profile={profile} social={!preview ? social : null} />}
       </div>
 
       {entered && profile.music?.enabled && profile.music?.src && (
@@ -51,7 +68,11 @@ export const PublicProfileRenderer = ({ profile, preview = false, forceEntered =
           music={profile.music}
           accent={profile.accent}
           autoStart={viaClick}
-          className="absolute bottom-3 left-1/2 z-20 -translate-x-1/2 sm:bottom-4 sm:left-4 sm:translate-x-0"
+          className={cn(
+            preview
+              ? 'absolute bottom-3 left-1/2 z-20 -translate-x-1/2'
+              : 'fixed bottom-3 left-1/2 z-20 -translate-x-1/2 sm:absolute sm:bottom-4 sm:left-4 sm:translate-x-0'
+          )}
         />
       )}
 

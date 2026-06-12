@@ -3,16 +3,22 @@ import { toast } from 'sonner';
 import { useProfileStore } from '@/stores/profile.store';
 import { EditorSection, Field } from '@/components/editor/Field';
 import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ToggleRow } from '@/components/editor/ToggleRow';
+import { FileUploadMock } from '@/components/editor/FileUploadMock';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { VISIBILITY_OPTIONS } from '@/types';
 
 export const AdvancedTab = () => {
   const advanced = useProfileStore((s) => s.profile.advanced);
+  const cursorFileId = useProfileStore((s) => s.profile.assetIds?.cursorFileId);
   const setNested = useProfileStore((s) => s.setNested);
   const reset = useProfileStore((s) => s.reset);
+
+  const applyCursorUpload = (value, asset) => {
+    setNested('advanced', 'customCursor', value);
+    setNested('assetIds', 'cursorFileId', asset?.id ?? null);
+  };
 
   return (
     <EditorSection title="Advanced" description="Power-user controls. Custom CSS is simulated safely on the live page.">
@@ -29,10 +35,20 @@ export const AdvancedTab = () => {
 
       <ToggleRow icon={Globe} label="SEO indexing" description="Allow search engines to find your profile" checked={!!advanced.seo} onCheckedChange={(v) => setNested('advanced', 'seo', v)} />
 
-      <Field label="Custom cursor URL" hint="A small PNG works best (32x32).">
-        <div className="relative">
-          <MousePointer2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={advanced.customCursor} onChange={(e) => setNested('advanced', 'customCursor', e.target.value)} placeholder="https://..." className="pl-9" />
+      <Field label="Custom cursor image" hint="Upload a .cur, .gif, or .png file. Cursor files are preserved so they keep working on the live profile.">
+        <div className="space-y-2">
+          <FileUploadMock
+            value={advanced.customCursor}
+            onChange={applyCursorUpload}
+            label="Cursor"
+            kind="CURSOR"
+            aspect="aspect-[3/1]"
+          />
+          {cursorFileId && (
+            <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <MousePointer2 className="h-3.5 w-3.5" /> Cursor upload is connected to this profile.
+            </p>
+          )}
         </div>
       </Field>
 

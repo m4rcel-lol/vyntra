@@ -4,7 +4,7 @@ import { storage } from '@/utils/storage';
 const saved = storage.get('settings') || {};
 
 const defaults = {
-  account: { displayName: 'Nova Sterling', email: 'nova@vyntra.bio', language: 'en' },
+  account: { displayName: 'Nova Sterling', email: 'nova@vyntra.sarl', language: 'en' },
   appearance: { reduceMotion: false, glassIntensity: 70, accent: '0 0% 98%', compact: false },
   notifications: { profileViews: true, linkClicks: false, newFollowers: true, productUpdates: true, weeklyDigest: false },
   privacy: { searchable: true, showViewCount: true, showJoinDate: true, allowMessages: true, analyticsSharing: false },

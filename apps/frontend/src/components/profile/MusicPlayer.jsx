@@ -42,7 +42,10 @@ export const MusicPlayer = ({ music, accent = '0 0% 100%', autoStart = false, cl
   if (!music?.enabled || !music?.src) return null;
 
   return (
-    <div className={cn('flex w-[calc(100vw-1rem)] max-w-sm items-center gap-2 rounded-2xl glass-strong border-gradient p-2.5 shadow-soft sm:w-96 sm:gap-3 sm:p-3', className)}>
+    <div
+      className={cn('flex w-[calc(100vw-1rem)] max-w-[23rem] items-center gap-2 rounded-2xl glass-strong border-gradient p-2.5 shadow-soft sm:w-96 sm:max-w-sm sm:gap-3 sm:p-3', className)}
+      style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+    >
       <audio
         ref={audioRef}
         src={music.src}
@@ -72,7 +75,7 @@ export const MusicPlayer = ({ music, accent = '0 0% 100%', autoStart = false, cl
         {music.cover ? <img src={music.cover} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center bg-secondary"><Music2 className="h-5 w-5" /></div>}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{music.title || 'Untitled track'}</p>
+        <p className="truncate text-sm font-medium leading-tight">{music.title || 'Untitled track'}</p>
         <p className="truncate text-xs text-muted-foreground">{music.artist || 'Unknown artist'}</p>
         <div className="mt-1.5 flex items-center gap-2">
           <span className="w-7 text-[10px] tabular-nums text-muted-foreground sm:w-8">{fmt((progress / 100) * duration)}</span>

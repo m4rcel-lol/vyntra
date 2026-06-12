@@ -17,6 +17,13 @@ const PublicProfilePage = lazy(() => import('@/pages/PublicProfilePage'));
 const FilesPage = lazy(() => import('@/pages/FilesPage'));
 const LeaderboardPage = lazy(() => import('@/pages/LeaderboardPage'));
 const PerksPage = lazy(() => import('@/pages/PerksPage'));
+const BlogPage = lazy(() => import('@/pages/BlogPage'));
+const BlogPostPage = lazy(() => import('@/pages/BlogPostPage'));
+const ForumsPage = lazy(() => import('@/pages/ForumsPage'));
+const ForumThreadPage = lazy(() => import('@/pages/ForumThreadPage'));
+const MessagesPage = lazy(() => import('@/pages/MessagesPage'));
+const SupportPage = lazy(() => import('@/pages/SupportPage'));
+const InfoPage = lazy(() => import('@/pages/InfoPage'));
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -27,20 +34,19 @@ const ScrollToTop = () => {
 };
 
 export const AppRoutes = () => {
-  const { pathname } = useLocation();
   const refresh = useAuthStore((s) => s.refresh);
   const checked = useAuthStore((s) => s.checked);
 
   useEffect(() => {
-    refresh();
-  }, [pathname, refresh]);
+    if (!checked) refresh();
+  }, [checked, refresh]);
 
   if (!checked) return <LoadingScreen />;
 
   return (
     <>
       <ScrollToTop />
-      <Suspense fallback={<LoadingScreen />}>
+      <Suspense fallback={null}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<GuestOnly><LoginPage /></GuestOnly>} />
@@ -48,20 +54,43 @@ export const AppRoutes = () => {
           <Route path="/u/:username" element={<PublicProfilePage />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/perks" element={<PerksPage />} />
+          <Route path="/blog" element={<BlogPage />} />
+          <Route path="/blog/:slug" element={<BlogPostPage />} />
+          <Route path="/forums" element={<ForumsPage />} />
+          <Route path="/forums/:slug" element={<ForumThreadPage />} />
           <Route path="/explore" element={<TemplatesPage publicView />} />
+          <Route path="/features" element={<InfoPage page="features" />} />
+          <Route path="/showcase" element={<InfoPage page="showcase" />} />
+          <Route path="/changelog" element={<InfoPage page="changelog" />} />
+          <Route path="/verified" element={<InfoPage page="verified" />} />
+          <Route path="/badges" element={<InfoPage page="badges" />} />
+          <Route path="/api-info" element={<InfoPage page="api" />} />
+          <Route path="/about" element={<InfoPage page="about" />} />
+          <Route path="/careers" element={<InfoPage page="careers" />} />
+          <Route path="/press" element={<InfoPage page="press" />} />
+          <Route path="/contact" element={<Navigate to="/support" replace />} />
+          <Route path="/privacy" element={<InfoPage page="privacy" />} />
+          <Route path="/terms" element={<InfoPage page="terms" />} />
+          <Route path="/cookies" element={<InfoPage page="cookies" />} />
+          <Route path="/guidelines" element={<InfoPage page="guidelines" />} />
+          <Route path="/status" element={<InfoPage page="status" />} />
 
           <Route path="/dashboard" element={<Protected><DashboardPage /></Protected>} />
           <Route path="/dashboard/editor" element={<Protected><EditorPage /></Protected>} />
           <Route path="/dashboard/templates" element={<Protected><TemplatesPage /></Protected>} />
           <Route path="/dashboard/analytics" element={<Protected><AnalyticsPage /></Protected>} />
           <Route path="/dashboard/files" element={<Protected><FilesPage /></Protected>} />
+          <Route path="/dashboard/messages" element={<Protected><MessagesPage /></Protected>} />
+          <Route path="/dashboard/support" element={<Navigate to="/support" replace />} />
           <Route path="/dashboard/settings" element={<Protected><SettingsPage /></Protected>} />
+          <Route path="/support" element={<Protected><SupportPage /></Protected>} />
           <Route path="/admin" element={<AdminOnly><AdminPage /></AdminOnly>} />
 
           <Route path="/editor" element={<Navigate to="/dashboard/editor" replace />} />
           <Route path="/templates" element={<Navigate to="/dashboard/templates" replace />} />
           <Route path="/analytics" element={<Navigate to="/dashboard/analytics" replace />} />
           <Route path="/files" element={<Navigate to="/dashboard/files" replace />} />
+          <Route path="/messages" element={<Navigate to="/dashboard/messages" replace />} />
           <Route path="/settings" element={<Navigate to="/dashboard/settings" replace />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
@@ -73,10 +102,9 @@ export const AppRoutes = () => {
 const Protected = ({ children }) => {
   const location = useLocation();
   const checked = useAuthStore((s) => s.checked);
-  const loading = useAuthStore((s) => s.loading);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
-  if (!checked || loading) return <LoadingScreen />;
+  if (!checked) return <LoadingScreen />;
   if (!isAuthenticated) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   return children;
 };
@@ -94,12 +122,11 @@ const GuestOnly = ({ children }) => {
 const AdminOnly = ({ children }) => {
   const location = useLocation();
   const checked = useAuthStore((s) => s.checked);
-  const loading = useAuthStore((s) => s.loading);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
 
-  if (!checked || loading) return <LoadingScreen />;
+  if (!checked) return <LoadingScreen />;
   if (!isAuthenticated) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
-  if (user?.role !== 'admin') return <Navigate to="/dashboard" replace />;
+  if (!['owner', 'admin'].includes(user?.role)) return <Navigate to="/dashboard" replace />;
   return children;
 };
