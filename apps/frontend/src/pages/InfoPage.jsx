@@ -13,7 +13,7 @@ const pages = {
   features: {
     eyebrow: 'Product',
     title: 'Features built for serious creator profiles.',
-    description: 'Vyntra.bio keeps the product focused: fast public profiles, polished customization, self-hosted storage, and privacy-friendly analytics.',
+    description: 'Vyntra keeps the product focused: fast public profiles, polished customization, self-hosted storage, and privacy-friendly analytics.',
     icon: Sparkles,
     cta: { label: 'Open the editor', to: '/dashboard/editor' },
     sections: [
@@ -37,7 +37,7 @@ const pages = {
   changelog: {
     eyebrow: 'Updates',
     title: 'Changelog',
-    description: 'Major Vyntra.bio updates are tracked here and in the blog so self-hosted installs know what changed.',
+    description: 'Major Vyntra updates are tracked here and in the blog so self-hosted installs know what changed.',
     icon: Newspaper,
     cta: { label: 'Read the blog', to: '/blog' },
     sections: [
@@ -61,7 +61,7 @@ const pages = {
   badges: {
     eyebrow: 'Identity',
     title: 'Badges',
-    description: 'Vyntra.bio badges are designed as trust and role markers, not paid perks.',
+    description: 'Vyntra badges are designed as trust and role markers, not paid perks.',
     icon: BadgeCheck,
     cta: { label: 'View perks', to: '/perks' },
     sections: [
@@ -73,7 +73,7 @@ const pages = {
   api: {
     eyebrow: 'Developers',
     title: 'API and integration notes',
-    description: 'Vyntra.bio exposes the internal JSON API used by the frontend. It is designed for the self-hosted app and protected by cookies, CSRF, and role checks.',
+    description: 'Vyntra exposes the internal JSON API used by the frontend. It is designed for the self-hosted app and protected by cookies, CSRF, and role checks.',
     icon: Terminal,
     cta: { label: 'View GitHub', href: 'https://github.com/m4rcel-lol' },
     sections: [
@@ -84,8 +84,8 @@ const pages = {
   },
   about: {
     eyebrow: 'Company',
-    title: 'About Vyntra.bio',
-    description: 'Vyntra.bio is a self-hosted creator identity platform for profiles, links, portfolios, templates, analytics, and updates.',
+    title: 'About Vyntra',
+    description: 'Vyntra is a self-hosted creator identity platform for profiles, links, portfolios, templates, analytics, and updates.',
     icon: HeartHandshake,
     cta: { label: 'Start building', to: '/register' },
     sections: [
@@ -97,7 +97,7 @@ const pages = {
   careers: {
     eyebrow: 'Company',
     title: 'Careers',
-    description: 'Vyntra.bio is self-hosted software, not a hiring marketplace. This page exists so the footer is complete and transparent.',
+    description: 'Vyntra is self-hosted software, not a hiring marketplace. This page exists so the footer is complete and transparent.',
     icon: Briefcase,
     cta: { label: 'Contact', to: '/support' },
     sections: [
@@ -109,13 +109,13 @@ const pages = {
   press: {
     eyebrow: 'Company',
     title: 'Press',
-    description: 'Use this page for quick project context, screenshots, and owner contact details when writing about Vyntra.bio.',
+    description: 'Use this page for quick project context, screenshots, and owner contact details when writing about Vyntra.',
     icon: Newspaper,
     cta: { label: 'Contact', to: '/support' },
     sections: [
       { title: 'What it is', icon: Sparkles, body: 'A dark, polished, self-hosted bio-link and profile-card platform for creators.' },
       { title: 'What makes it different', icon: Shield, body: 'No paid tiers, no Stripe, no external S3 requirement, and no locked premium features.' },
-      { title: 'Brand usage', icon: FileText, body: 'Use the Vyntra.bio name clearly and avoid implying affiliation with unrelated bio-link services.' },
+      { title: 'Brand usage', icon: FileText, body: 'Use the Vyntra name clearly and avoid implying affiliation with unrelated bio-link services.' },
     ],
   },
   contact: {
@@ -133,7 +133,7 @@ const pages = {
   privacy: {
     eyebrow: 'Legal',
     title: 'Privacy',
-    description: 'Vyntra.bio is designed for privacy-friendly self-hosting. Your deployment controls its own database, uploads, logs, and retention.',
+    description: 'Vyntra is designed for privacy-friendly self-hosting. Your deployment controls its own database, uploads, logs, and retention.',
     icon: Shield,
     cta: { label: 'View settings', to: '/dashboard/settings' },
     sections: [
@@ -145,19 +145,19 @@ const pages = {
   terms: {
     eyebrow: 'Legal',
     title: 'Terms',
-    description: 'These terms describe expected use for a self-hosted Vyntra.bio instance.',
+    description: 'These terms describe expected use for a self-hosted Vyntra instance.',
     icon: Scale,
     cta: { label: 'Read guidelines', to: '/guidelines' },
     sections: [
       { title: 'Use responsibly', icon: Shield, body: 'Do not use profiles, templates, links, uploads, or blog posts for abuse, impersonation, malware, scams, or illegal content.' },
       { title: 'Operator responsibility', icon: Terminal, body: 'The person hosting the instance controls enforcement, backups, domains, and server operations.' },
-      { title: 'No paid feature promise', icon: Sparkles, body: 'Vyntra.bio ships all premium-style features free in this project.' },
+      { title: 'No paid feature promise', icon: Sparkles, body: 'Vyntra ships all premium-style features free in this project.' },
     ],
   },
   cookies: {
     eyebrow: 'Legal',
     title: 'Cookies',
-    description: 'Vyntra.bio uses only practical cookies needed for authentication, CSRF protection, and privacy-friendly view deduplication.',
+    description: 'Vyntra uses only practical cookies needed for authentication, CSRF protection, and privacy-friendly view deduplication.',
     icon: Cookie,
     cta: { label: 'Privacy details', to: '/privacy' },
     sections: [

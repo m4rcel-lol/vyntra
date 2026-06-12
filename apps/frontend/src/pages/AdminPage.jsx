@@ -386,7 +386,7 @@ export default function AdminPage() {
                 </label>
                 <label className="space-y-2 text-sm">
                   <span>Tooltip</span>
-                  <Input value={badgeForm.tooltip} onChange={(e) => setBadgeForm((s) => ({ ...s, tooltip: e.target.value }))} placeholder="Identity verified by Vyntra.bio" />
+                  <Input value={badgeForm.tooltip} onChange={(e) => setBadgeForm((s) => ({ ...s, tooltip: e.target.value }))} placeholder="Identity verified by Vyntra" />
                 </label>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="space-y-2 text-sm">

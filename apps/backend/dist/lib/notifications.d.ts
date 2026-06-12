@@ -5,6 +5,7 @@ export declare function createNotification(app: FastifyInstance, params: {
     title: string;
     body?: string;
     url?: string;
+    imageUrl?: string;
 }): Promise<{
     type: string;
     id: string;
@@ -13,6 +14,7 @@ export declare function createNotification(app: FastifyInstance, params: {
     body: string;
     title: string;
     url: string;
+    imageUrl: string;
     readAt: Date | null;
     clearedAt: Date | null;
 }>;

@@ -1,5 +1,5 @@
 /**
- * Vyntra.bio — Domain type definitions (JSDoc-based for JS environment).
+ * Vyntra — Domain type definitions (JSDoc-based for JS environment).
  * These describe shared frontend data shapes so editors get IntelliSense.
  */
 

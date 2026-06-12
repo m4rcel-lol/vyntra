@@ -97,7 +97,7 @@ export default function DashboardPage() {
             Welcome back, {(currentUser.displayName || currentUser.username).split(' ')[0]}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Here is how <span className="text-foreground">vyntra.bio/{currentUser.username}</span> is performing.
+            Here is how <span className="text-foreground">vyntra.sarl/{currentUser.username}</span> is performing.
           </p>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:flex">

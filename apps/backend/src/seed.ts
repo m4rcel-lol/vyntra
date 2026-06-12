@@ -13,7 +13,7 @@ const normalizedAdminUsername = adminUsername.toLowerCase();
 
 const globalBadges = [
   ["owner", "Owner", "#facc15", "#facc15", "Platform owner"],
-  ["staff", "Staff", "#38bdf8", "#38bdf8", "Vyntra.bio staff"],
+  ["staff", "Staff", "#38bdf8", "#38bdf8", "Vyntra staff"],
   ["moderator", "Moderator", "#22c55e", "#22c55e", "Community moderator"],
   ["verified", "Verified", "#60a5fa", "#60a5fa", "Verified identity"],
   ["early-user", "Early User", "#f472b6", "#f472b6", "Joined during the early launch"],
@@ -22,7 +22,7 @@ const globalBadges = [
   ["musician", "Musician", "#34d399", "#34d399", "Creates music"],
   ["gamer", "Gamer", "#818cf8", "#818cf8", "Gaming profile"],
   ["partner", "Partner", "#2dd4bf", "#2dd4bf", "Community partner"],
-  ["contributor", "Contributor", "#c084fc", "#c084fc", "Contributed to Vyntra.bio"],
+  ["contributor", "Contributor", "#c084fc", "#c084fc", "Contributed to Vyntra"],
   ["unlimited", "Unlimited", "#d4d4d4", "#ffffff", "All features unlocked for free"]
 ] as const;
 
@@ -65,7 +65,7 @@ async function main() {
         create: {
           displayName: "Vyntra Owner",
           bio: ownerBio,
-          location: "Vyntra.bio",
+          location: "Vyntra",
           layout: "minimal-text",
           theme: {
             accentColor: "#d8d8d8",
@@ -81,13 +81,13 @@ async function main() {
             backgroundAnimation: "gradient"
           },
           metadata: {
-            title: "Vyntra.bio Owner",
-            description: "A creator profile powered by Vyntra.bio"
+            title: "Vyntra Owner",
+            description: "A creator profile powered by Vyntra"
           },
           links: {
             create: [
               {
-                title: "Vyntra.bio",
+                title: "Vyntra",
                 url: "https://example.com",
                 kind: "website",
                 order: 0
@@ -115,7 +115,7 @@ async function main() {
       userId: admin.id,
       displayName: admin.username,
       bio: ownerBio,
-      location: "Vyntra.bio",
+      location: "Vyntra",
       layout: "minimal-text",
       theme: {
         accentColor: "#d8d8d8",
@@ -131,8 +131,8 @@ async function main() {
         backgroundAnimation: "gradient"
       },
       metadata: {
-        title: `${admin.username} on Vyntra.bio`,
-        description: "A creator profile powered by Vyntra.bio"
+        title: `${admin.username} on Vyntra`,
+        description: "A creator profile powered by Vyntra"
       }
     }
   });
@@ -143,7 +143,7 @@ async function main() {
       data: {
         displayName: "Vyntra Owner",
         bio: ownerBio,
-        location: "Vyntra.bio",
+        location: "Vyntra",
         layout: "minimal-text",
         statusText: ""
       }
@@ -169,13 +169,13 @@ async function main() {
       },
       metadata: {
         title: "Monochrome Starter",
-        description: "A clean dark Vyntra.bio profile template"
+        description: "A clean dark Vyntra profile template"
       },
       embeds: [],
       customCss: "",
       clickToEnter: true,
       links: [
-        { title: "Vyntra.bio", url: "https://example.com", kind: "website", order: 0, isVisible: true, style: {} },
+        { title: "Vyntra", url: "https://example.com", kind: "website", order: 0, isVisible: true, style: {} },
         { title: "GitHub", url: "https://github.com", kind: "github", order: 1, isVisible: true, style: {} }
       ],
       badges: [
@@ -273,14 +273,14 @@ async function main() {
     where: { id: "seed-welcome-announcement" },
     create: {
       id: "seed-welcome-announcement",
-      title: "Welcome to Vyntra.bio",
+      title: "Welcome to Vyntra",
       body: "Every customization, badge, template, and analytics feature is available for free.",
       tone: "success",
       createdById: admin.id
     },
     update: {
       isActive: true,
-      title: "Welcome to Vyntra.bio",
+      title: "Welcome to Vyntra",
       body: "Every customization, badge, template, and analytics feature is available for free."
     }
   });
@@ -294,9 +294,9 @@ async function main() {
       data: {
         authorUserId: admin.id,
         slug: "welcome-to-vyntra",
-        title: "Welcome to Vyntra.bio",
-        excerpt: "What the self-hosted Vyntra.bio blog is for, and how staff can use it for updates.",
-        contentMarkdown: `# Welcome to Vyntra.bio
+        title: "Welcome to Vyntra",
+        excerpt: "What the self-hosted Vyntra blog is for, and how staff can use it for updates.",
+        contentMarkdown: `# Welcome to Vyntra
 
 This blog is the public update feed for your self-hosted Vyntra instance.
 

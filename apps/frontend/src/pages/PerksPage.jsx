@@ -101,7 +101,7 @@ export default function PerksPage() {
               transition={{ delay: 0.05 }}
               className="mx-auto mt-6 max-w-3xl font-display text-4xl font-semibold leading-tight tracking-tight sm:text-6xl"
             >
-              Every Vyntra.bio perk is included for every user.
+              Every Vyntra perk is included for every user.
             </motion.h1>
             <motion.p
               initial={{ opacity: 0, y: 16 }}

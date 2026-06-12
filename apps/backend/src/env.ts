@@ -24,7 +24,7 @@ const optionalBooleanFromEnv = z.preprocess((value) => {
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
-  PUBLIC_APP_NAME: z.string().default("Vyntra.bio"),
+  PUBLIC_APP_NAME: z.string().default("Vyntra"),
   PUBLIC_APP_URL: z.string().url().default("http://localhost:8080"),
   FRONTEND_ORIGIN: z.string().default("http://localhost:8080"),
   DATABASE_URL: z.string().min(1),

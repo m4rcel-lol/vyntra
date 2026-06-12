@@ -33,7 +33,7 @@ const FEATURES = [
 ];
 
 const STEPS = [
-  { n: '01', title: 'Claim your link', desc: 'Grab your unique vyntra.bio/username in seconds.' },
+  { n: '01', title: 'Claim your link', desc: 'Grab your unique vyntra.sarl/username in seconds.' },
   { n: '02', title: 'Design it live', desc: 'Tune effects, media, colors and links with an instant live preview.' },
   { n: '03', title: 'Share everywhere', desc: 'One link for every platform, fully responsive and lightning fast.' },
 ];
@@ -52,7 +52,7 @@ const INCLUSIONS = [
 ];
 
 const FAQS = [
-  { q: 'Is Vyntra.bio really free?', a: 'Yes. Every effect, badge, template, upload type, and analytics view is available to every user for free.' },
+  { q: 'Is Vyntra really free?', a: 'Yes. Every effect, badge, template, upload type, and analytics view is available to every user for free.' },
   { q: 'Do I need to know how to code?', a: 'Not at all. Everything is visual with a live preview. Advanced users can still add sanitized custom CSS.' },
   { q: 'Can I use my own domain?', a: 'Yes. The app is reverse-proxy ready, so self-hosted installs can route custom domains through Caddy, Nginx, or Traefik.' },
   { q: 'Will my profile work on mobile?', a: 'The minimal profile layout is fully responsive and tuned for fast loads on any device.' },
@@ -116,7 +116,7 @@ export default function LandingPage() {
               transition={{ delay: 0.12, duration: 0.6 }}
               className="mt-6 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg text-pretty"
             >
-              Vyntra.bio turns your links into a cinematic, animated profile card.
+              Vyntra turns your links into a cinematic, animated profile card.
               Pick a layout, drop in your accents, and ship a page that feels like you.
             </motion.p>
 
@@ -127,7 +127,7 @@ export default function LandingPage() {
               transition={{ delay: 0.18, duration: 0.6 }}
               className="mt-8 flex max-w-md items-center gap-2 rounded-2xl glass-panel border-gradient p-2"
             >
-              <span className="pl-3 text-sm text-muted-foreground">vyntra.bio/</span>
+              <span className="pl-3 text-sm text-muted-foreground">vyntra.sarl/</span>
               <Input
                 value={username}
                 onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
@@ -336,7 +336,7 @@ export default function LandingPage() {
       {/* ============ INCLUDED ============ */}
       <section id="pricing" className="relative py-24">
         <div className="mx-auto max-w-6xl px-6">
-          <SectionHeading eyebrow="Free for everyone" title="No plans, no locked features" description="Vyntra.bio is built for self-hosting. Every advanced feature is included by default." />
+          <SectionHeading eyebrow="Free for everyone" title="No plans, no locked features" description="Vyntra is built for self-hosting. Every advanced feature is included by default." />
           <div className="mt-14 grid gap-6 lg:grid-cols-3">
             {INCLUSIONS.map((plan, i) => (
               <motion.div

@@ -255,7 +255,7 @@ export const EditorialLayout = ({ profile }) => (
           </div>
           <div className="rounded-2xl border border-border bg-secondary/20 p-4">
             <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Status</p>
-            <p className="mt-3 text-sm leading-relaxed text-foreground/80">{profile.status || 'Building on Vyntra.bio'}</p>
+            <p className="mt-3 text-sm leading-relaxed text-foreground/80">{profile.status || 'Building on Vyntra'}</p>
           </div>
         </div>
         <SocialLinks links={profile.links} accent={profile.accent} className="mt-5" />

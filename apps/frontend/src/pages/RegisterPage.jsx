@@ -60,7 +60,7 @@ export default function RegisterPage() {
         <div className="space-y-2">
           <Label htmlFor="username">Username</Label>
           <div className="relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">vyntra.bio/</span>
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">vyntra.sarl/</span>
             <Input id="username" data-testid="register-username" placeholder="yourname" className="pl-[5.4rem]" {...register('username')} />
           </div>
           {errors.username && <p className="text-xs text-destructive">{errors.username.message}</p>}

@@ -1,1 +1,0 @@
-import{h as e,n as t}from"./Logo-BeMl-kXZ.js";var n=e(),r=({as:e=`span`,className:r,children:i,...a})=>(0,n.jsx)(e,{className:t(`text-chrome`,r),...a,children:i});export{r as t};

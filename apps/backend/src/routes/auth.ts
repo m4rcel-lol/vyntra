@@ -50,8 +50,8 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
               theme: defaultTheme(),
               effects: defaultEffects(),
               metadata: {
-                title: `${username} on Vyntra.bio`,
-                description: "A creator profile on Vyntra.bio"
+                title: `${username} on Vyntra`,
+                description: "A creator profile on Vyntra"
               },
               links: {
                 create: [

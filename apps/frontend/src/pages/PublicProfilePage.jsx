@@ -73,7 +73,7 @@ export default function PublicProfilePage() {
         className="fixed left-4 top-4 z-30 flex items-center gap-2 rounded-full glass-strong border-gradient px-3 py-1.5 text-xs text-foreground/70 transition-colors hover:text-foreground"
         aria-label="Vyntra home"
       >
-        <Logo size={18} showText={false} /> vyntra.bio
+        <Logo size={18} showText={false} /> vyntra.sarl
       </Link>
       <PublicProfileRenderer
         profile={profile}

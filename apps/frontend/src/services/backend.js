@@ -564,9 +564,11 @@ function mapProfileResponse(response) {
   const banner = assets.banner?.url || ABSTRACT.fluid2;
   const backgroundAsset = assets.background;
   const isVideo = backgroundAsset?.mimeType?.startsWith?.('video/');
+  const isGif = backgroundAsset?.mimeType === 'image/gif';
   const backgroundUrl = backgroundAsset?.url || assets.banner?.url || '';
   const accent = hexToHsl(theme.accentColor || '#ffffff');
-  const particles = effects.particles || 'stars';
+  const particleMode = normalizeParticleMode(effects.particles);
+  const cursorTrailMode = normalizeCursorTrail(effects.cursorTrail);
   const musicActivity = asObject(profile.musicActivity);
   const audioMetadata = asObject(assets.audio?.metadata);
   const embeddedCover = asObject(audioMetadata.cover);
@@ -591,25 +593,25 @@ function mapProfileResponse(response) {
     views: profile.viewCount ?? 0,
     accent,
     layout: 'minimal',
-    background: {
-      type: isVideo ? 'video' : backgroundUrl ? 'image' : 'gradient',
-      color: '0 0% 4%',
-      gradient: 'linear-gradient(135deg, #050505 0%, #111111 50%, #050505 100%)',
-      image: isVideo ? banner : backgroundUrl,
-      video: isVideo ? backgroundUrl : '',
-      blur: effects.blurOverlay ? 4 : 0,
-      overlay: Math.round((Number(effects.darkOverlay ?? 0.45)) * 100),
-    },
+    background: mapProfileBackground({ effects, backgroundAsset, backgroundUrl, banner, isVideo, isGif }),
     effects: {
       glowBorder: theme.borderGlow !== false,
       floating: effects.hoverAnimation !== 'none',
-      particles: particles !== 'none' && particles !== 'snow' && particles !== 'rain' && particles !== 'stars',
-      snow: particles === 'snow',
-      rain: particles === 'rain',
-      stars: particles === 'stars' || !particles,
-      cursorTrail: effects.cursorTrail && effects.cursorTrail !== 'none',
+      particles: ['sparkles', 'bubbles', 'shapes'].includes(particleMode),
+      particleMode,
+      particleDensity: clampNumber(effects.particleDensity, 10, 90, 32),
+      particleSpeed: clampNumber(effects.particleSpeed, 0.5, 2, 1),
+      effectIntensity: clampNumber(effects.effectIntensity, 0.2, 1, 0.7),
+      snow: particleMode === 'snow',
+      rain: particleMode === 'rain',
+      stars: particleMode === 'stars',
+      cursorTrail: cursorTrailMode !== 'none',
+      cursorTrailMode,
       clickToEnter: !!profile.clickToEnter,
       pageEntrance: effects.entranceAnimation !== 'none',
+      entranceAnimation: effects.entranceAnimation || 'scale',
+      hoverAnimation: effects.hoverAnimation || 'lift',
+      backgroundAnimation: effects.backgroundAnimation || 'none',
     },
     links: (response.links ?? []).map(mapLink),
     badges: (response.badges ?? []).map(mapBadge),
@@ -625,9 +627,9 @@ function mapProfileResponse(response) {
     },
     embeds: {},
     metadata: {
-      title: metadata.title || `${profile.displayName || username} · Vyntra.bio`,
-      description: metadata.description || profile.bio || 'A creator profile on Vyntra.bio',
-      ogImage: assets.metadata?.url || banner,
+      title: metadata.title || `${profile.displayName || username} · Vyntra`,
+      description: metadata.description || profile.bio || 'A creator profile on Vyntra',
+      ogImage: assets.metadata?.url || metadata.ogImage || '',
     },
     advanced: {
       customCss: profile.sanitizedCss || '',

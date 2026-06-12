@@ -1,6 +1,6 @@
-# Vyntra.bio
+# Vyntra
 
-Vyntra.bio is a self-hosted bio-link/profile-card platform for creator profiles, portfolio pages, social hubs, templates, files, badges, realtime previews, moderation, and privacy-friendly analytics.
+Vyntra is a self-hosted bio-link/profile-card platform for creator profiles, portfolio pages, social hubs, templates, files, badges, realtime previews, moderation, and privacy-friendly analytics.
 
 All advanced features are free for every user. The app intentionally does not include payments, subscriptions, SMTP mail delivery, or third-party auth.
 

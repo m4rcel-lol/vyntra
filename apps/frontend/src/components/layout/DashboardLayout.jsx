@@ -11,7 +11,7 @@ import { subscribeRealtime } from '@/services/realtime.service';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
-export const DashboardLayout = ({ title, children, fluid = false }) => {
+export const DashboardLayout = ({ title, children, fluid = false, mainClassName }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const collapsed = useUIStore((s) => s.sidebarCollapsed);
@@ -56,7 +56,7 @@ export const DashboardLayout = ({ title, children, fluid = false }) => {
 
       <div className={cn('transition-[padding] duration-300', collapsed ? 'lg:pl-[76px]' : 'lg:pl-64')}>
         <Topbar title={title} />
-        <main className={cn('mx-auto w-full px-3 py-5 pb-28 sm:px-6 sm:py-6 lg:py-8 lg:pb-8', !fluid && 'max-w-7xl')}>
+        <main className={cn('mx-auto w-full px-3 py-5 pb-28 sm:px-6 sm:py-6 lg:py-8 lg:pb-8', !fluid && 'max-w-7xl', mainClassName)}>
           <PageTransition>{children}</PageTransition>
         </main>
       </div>

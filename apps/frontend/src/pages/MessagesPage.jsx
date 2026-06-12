@@ -412,7 +412,11 @@ export default function MessagesPage() {
   }
 
   return (
-    <DashboardLayout title="Messages" fluid>
+    <DashboardLayout
+      title="Messages"
+      fluid
+      mainClassName="h-[calc(100dvh-3.5rem)] overflow-hidden py-3 pb-24 sm:h-[calc(100dvh-4rem)] sm:py-4 lg:pb-4"
+    >
       <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
       <CallOverlay
         state={callState}
@@ -425,8 +429,8 @@ export default function MessagesPage() {
         onEnd={() => cleanupVoiceCall(true)}
         onToggleMute={toggleMute}
       />
-      <div className="grid min-h-[calc(100vh-8rem)] gap-4 lg:grid-cols-[22rem_1fr]">
-        <GlassCard className="overflow-hidden">
+      <div className="grid h-full min-h-0 grid-rows-[minmax(10rem,14rem)_minmax(0,1fr)] gap-4 lg:grid-cols-[22rem_1fr] lg:grid-rows-none">
+        <GlassCard className="flex min-h-0 flex-col overflow-hidden">
           <div className="border-b border-border p-4">
             <h2 className="font-display text-xl font-semibold">Friends chat</h2>
             <p className="text-sm text-muted-foreground">Reply, attach files, and talk live with accepted friends.</p>
@@ -446,7 +450,7 @@ export default function MessagesPage() {
               />
             </div>
           </div>
-          <div className="max-h-[64vh] overflow-y-auto p-2">
+          <div className="min-h-0 flex-1 overflow-y-auto p-2">
             {conversationsError ? (
               <div className="p-6 text-center text-sm text-destructive">{conversationsErrorValue?.message || 'Could not load conversations.'}</div>
             ) : isLoading ? (
@@ -473,7 +477,7 @@ export default function MessagesPage() {
           </div>
         </GlassCard>
 
-        <GlassCard className="flex min-h-[34rem] flex-col overflow-hidden">
+        <GlassCard className="flex min-h-0 flex-col overflow-hidden">
           <div className="flex flex-wrap items-center gap-3 border-b border-border p-4">
             {friend ? (
               <>
@@ -498,7 +502,7 @@ export default function MessagesPage() {
             )}
           </div>
 
-          <div className="flex-1 space-y-3 overflow-y-auto p-4">
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
             {detailError ? (
               <div className="flex h-full flex-col items-center justify-center px-6 text-center text-sm text-destructive">
                 {detailErrorValue?.message || 'Could not load this conversation.'}

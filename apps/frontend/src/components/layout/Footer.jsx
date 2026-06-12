@@ -63,7 +63,7 @@ export const Footer = () => (
             <Logo />
           </Link>
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
-            One polished link for everything you are. Vyntra.bio is self-hosted, creator-focused, and fully unlocked.
+            One polished link for everything you are. Vyntra is self-hosted, creator-focused, and fully unlocked.
           </p>
           <div className="mt-5 flex gap-2">
             {socials.map((social) => (
@@ -104,7 +104,7 @@ export const Footer = () => (
       </div>
 
       <div className="mt-10 flex flex-col gap-4 border-t border-border pt-6 sm:mt-12 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} Vyntra.bio. Self-hosted creator profiles.</p>
+        <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} Vyntra. Self-hosted creator profiles.</p>
         <Link to="/status" className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground">
           <span className="flex h-2 w-2 rounded-full bg-success shadow-[0_0_12px_rgba(34,197,94,0.5)]" />
           All systems operational
