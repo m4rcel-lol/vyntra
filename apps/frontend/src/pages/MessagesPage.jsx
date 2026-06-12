@@ -7,8 +7,10 @@ import {
   Loader2,
   MessageCircle,
   Mic,
+  MicOff,
   Paperclip,
   Phone,
+  PhoneCall,
   PhoneOff,
   Reply,
   Search,
@@ -28,6 +30,8 @@ import { useAuthStore } from '@/stores/auth.store';
 import { formatRelative } from '@/utils/format';
 import { cn } from '@/lib/utils';
 
+const CALL_ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
+
 export default function MessagesPage() {
   const queryClient = useQueryClient();
   const currentUser = useAuthStore((s) => s.user);
@@ -40,12 +44,19 @@ export default function MessagesPage() {
   const [typingUsers, setTypingUsers] = useState({});
   const [callState, setCallState] = useState('idle');
   const [incomingCall, setIncomingCall] = useState(null);
+  const [callConversationId, setCallConversationId] = useState('');
+  const [callStartedAt, setCallStartedAt] = useState(null);
+  const [callDuration, setCallDuration] = useState(0);
+  const [muted, setMuted] = useState(false);
   const fileInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const typingClearTimersRef = useRef({});
+  const activeConversationIdRef = useRef('');
+  const callConversationIdRef = useRef('');
   const peerRef = useRef(null);
   const localStreamRef = useRef(null);
   const remoteAudioRef = useRef(null);
+  const ringtoneRef = useRef(null);
 
   const { data: conversations = [], isLoading, isError: conversationsError, error: conversationsErrorValue } = useQuery({
     queryKey: ['messages', 'conversations'],
@@ -83,11 +94,42 @@ export default function MessagesPage() {
   });
   const friend = detail?.conversation?.friend || activeConversation?.friend || null;
   const messages = detail?.messages ?? [];
+  const callConversation = callConversationId
+    ? conversations.find((conversation) => conversation.id === callConversationId) || null
+    : null;
+  const callFriend = callConversation?.friend
+    || (callConversationId === activeConversationId ? friend : null)
+    || (incomingCall?.from
+      ? {
+          username: incomingCall.from.username,
+          displayName: incomingCall.from.username,
+          avatar: null,
+        }
+      : null);
 
   const typingNames = useMemo(
     () => Object.values(typingUsers).filter(Boolean).join(', '),
     [typingUsers]
   );
+
+  useEffect(() => {
+    activeConversationIdRef.current = activeConversationId;
+  }, [activeConversationId]);
+
+  useEffect(() => {
+    callConversationIdRef.current = callConversationId;
+  }, [callConversationId]);
+
+  useEffect(() => {
+    if (callState !== 'connected' || !callStartedAt) {
+      setCallDuration(0);
+      return undefined;
+    }
+    const updateDuration = () => setCallDuration(Math.max(0, Math.floor((Date.now() - callStartedAt) / 1000)));
+    updateDuration();
+    const interval = window.setInterval(updateDuration, 1000);
+    return () => window.clearInterval(interval);
+  }, [callStartedAt, callState]);
 
   useEffect(() => {
     if (!activeConversationId) return undefined;
@@ -106,7 +148,7 @@ export default function MessagesPage() {
         }
       }
 
-      if (event === 'messages:typing' && payload?.conversationId === activeConversationId && payload.userId !== currentUser?.id) {
+      if (event === 'messages:typing' && payload?.conversationId === activeConversationIdRef.current && payload.userId !== currentUser?.id) {
         setTypingUsers((current) => {
           const next = { ...current };
           if (payload.isTyping) next[payload.userId] = payload.username;
@@ -125,13 +167,27 @@ export default function MessagesPage() {
         }
       }
 
-      if (payload?.conversationId !== activeConversationId || payload?.from?.id === currentUser?.id) return;
-      if (event === 'voice:offer') {
+      if (payload?.from?.id === currentUser?.id) return;
+
+      if (event === 'voice:offer' && payload?.conversationId) {
+        callConversationIdRef.current = payload.conversationId;
+        setCallConversationId(payload.conversationId);
+        setSelectedConversation(payload.conversationId);
         setIncomingCall(payload);
         setCallState((state) => (state === 'idle' ? 'ringing' : state));
+        setCallStartedAt(null);
+        startRingtone('incoming');
+        toast.info(`Incoming voice call from @${payload.from?.username || 'friend'}`);
+        return;
       }
+
+      const activeCallConversationId = callConversationIdRef.current || activeConversationIdRef.current;
+      if (!payload?.conversationId || payload.conversationId !== activeCallConversationId) return;
+
       if (event === 'voice:answer' && payload.answer) {
         peerRef.current?.setRemoteDescription(new RTCSessionDescription(payload.answer)).catch(() => null);
+        stopRingtone();
+        setCallStartedAt(Date.now());
         setCallState('connected');
       }
       if (event === 'voice:ice' && payload.candidate) {
@@ -142,7 +198,7 @@ export default function MessagesPage() {
         toast.info(`${payload.from?.username || 'Your friend'} ended the voice chat`);
       }
     });
-  }, [activeConversationId, currentUser?.id, queryClient]);
+  }, [currentUser?.id, queryClient, setSearchParams]);
 
   useEffect(() => () => cleanupVoiceCall(false), []);
 
@@ -198,6 +254,10 @@ export default function MessagesPage() {
   async function startVoiceCall() {
     if (!activeConversationId || !friend) return;
     try {
+      callConversationIdRef.current = activeConversationId;
+      setCallConversationId(activeConversationId);
+      setCallStartedAt(null);
+      setCallState('connecting');
       const stream = await window.navigator.mediaDevices.getUserMedia({ audio: true });
       const peer = createPeer(activeConversationId);
       localStreamRef.current = stream;
@@ -206,6 +266,7 @@ export default function MessagesPage() {
       await peer.setLocalDescription(offer);
       await emitRealtime('voice:offer', { conversationId: activeConversationId, offer });
       setCallState('calling');
+      startRingtone('outgoing');
       toast.info(`Calling @${friend.username}...`);
     } catch (error) {
       cleanupVoiceCall(false);
@@ -214,17 +275,23 @@ export default function MessagesPage() {
   }
 
   async function acceptVoiceCall() {
-    if (!incomingCall?.offer || !activeConversationId) return;
+    const conversationId = incomingCall?.conversationId || callConversationId || activeConversationId;
+    if (!incomingCall?.offer || !conversationId) return;
     try {
+      stopRingtone();
+      callConversationIdRef.current = conversationId;
+      setCallConversationId(conversationId);
+      setCallState('connecting');
       const stream = await window.navigator.mediaDevices.getUserMedia({ audio: true });
-      const peer = createPeer(activeConversationId);
+      const peer = createPeer(conversationId);
       localStreamRef.current = stream;
       stream.getTracks().forEach((track) => peer.addTrack(track, stream));
       await peer.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
       const answer = await peer.createAnswer();
       await peer.setLocalDescription(answer);
-      await emitRealtime('voice:answer', { conversationId: activeConversationId, answer });
+      await emitRealtime('voice:answer', { conversationId, answer });
       setIncomingCall(null);
+      setCallStartedAt(Date.now());
       setCallState('connected');
     } catch (error) {
       cleanupVoiceCall(true);
@@ -233,8 +300,8 @@ export default function MessagesPage() {
   }
 
   function createPeer(conversationId) {
-    cleanupVoiceCall(false);
-    const peer = new RTCPeerConnection({ iceServers: [] });
+    resetVoiceResources();
+    const peer = new RTCPeerConnection({ iceServers: CALL_ICE_SERVERS });
     peerRef.current = peer;
     peer.onicecandidate = (event) => {
       if (event.candidate) {
@@ -246,30 +313,118 @@ export default function MessagesPage() {
         remoteAudioRef.current.srcObject = event.streams[0];
         remoteAudioRef.current.play().catch(() => null);
       }
+      stopRingtone();
+      setCallStartedAt((startedAt) => startedAt || Date.now());
       setCallState('connected');
     };
     peer.onconnectionstatechange = () => {
-      if (['failed', 'closed', 'disconnected'].includes(peer.connectionState)) cleanupVoiceCall(false);
+      if (peer.connectionState === 'connected') {
+        stopRingtone();
+        setCallStartedAt((startedAt) => startedAt || Date.now());
+        setCallState('connected');
+      }
+      if (peer.connectionState === 'disconnected') setCallState('connecting');
+      if (['failed', 'closed'].includes(peer.connectionState)) cleanupVoiceCall(false);
     };
     return peer;
   }
 
-  function cleanupVoiceCall(notifyPeer = true) {
-    if (notifyPeer && activeConversationId && callState !== 'idle') {
-      emitRealtime('voice:end', { conversationId: activeConversationId }).catch(() => null);
-    }
+  function resetVoiceResources() {
+    stopRingtone();
     localStreamRef.current?.getTracks().forEach((track) => track.stop());
     localStreamRef.current = null;
     peerRef.current?.close();
     peerRef.current = null;
     if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
+  }
+
+  function cleanupVoiceCall(notifyPeer = true) {
+    const conversationId = callConversationIdRef.current || activeConversationIdRef.current;
+    if (notifyPeer && conversationId && callState !== 'idle') {
+      emitRealtime('voice:end', { conversationId }).catch(() => null);
+    }
+    resetVoiceResources();
     setIncomingCall(null);
+    setCallConversationId('');
+    setCallStartedAt(null);
+    setCallDuration(0);
+    setMuted(false);
     setCallState('idle');
+  }
+
+  function startRingtone(kind = 'incoming') {
+    if (typeof window === 'undefined') return;
+    stopRingtone();
+    try {
+      const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextCtor) return;
+      const context = new AudioContextCtor();
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      const level = kind === 'incoming' ? 0.075 : 0.035;
+      const activeMs = kind === 'incoming' ? 420 : 260;
+      const intervalMs = kind === 'incoming' ? 920 : 1550;
+
+      oscillator.type = 'sine';
+      oscillator.frequency.value = kind === 'incoming' ? 880 : 440;
+      gain.gain.value = 0.0001;
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start();
+
+      const pulse = () => {
+        const now = context.currentTime;
+        gain.gain.cancelScheduledValues(now);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.linearRampToValueAtTime(level, now + 0.04);
+        gain.gain.linearRampToValueAtTime(level, now + activeMs / 1000);
+        gain.gain.linearRampToValueAtTime(0.0001, now + activeMs / 1000 + 0.08);
+      };
+
+      context.resume().catch(() => null);
+      pulse();
+      const interval = window.setInterval(pulse, intervalMs);
+      ringtoneRef.current = { context, oscillator, interval };
+    } catch {
+      ringtoneRef.current = null;
+    }
+  }
+
+  function stopRingtone() {
+    const ringtone = ringtoneRef.current;
+    if (!ringtone) return;
+    window.clearInterval(ringtone.interval);
+    try {
+      ringtone.oscillator.stop();
+    } catch {
+      // The oscillator may already be stopped by the browser.
+    }
+    ringtone.context.close?.().catch(() => null);
+    ringtoneRef.current = null;
+  }
+
+  function toggleMute() {
+    const nextMuted = !muted;
+    localStreamRef.current?.getAudioTracks().forEach((track) => {
+      track.enabled = !nextMuted;
+    });
+    setMuted(nextMuted);
   }
 
   return (
     <DashboardLayout title="Messages" fluid>
       <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
+      <CallOverlay
+        state={callState}
+        friend={callFriend}
+        incoming={incomingCall}
+        duration={callDuration}
+        muted={muted}
+        onAccept={acceptVoiceCall}
+        onDecline={() => cleanupVoiceCall(true)}
+        onEnd={() => cleanupVoiceCall(true)}
+        onToggleMute={toggleMute}
+      />
       <div className="grid min-h-[calc(100vh-8rem)] gap-4 lg:grid-cols-[22rem_1fr]">
         <GlassCard className="overflow-hidden">
           <div className="border-b border-border p-4">
@@ -342,16 +497,6 @@ export default function MessagesPage() {
               </div>
             )}
           </div>
-
-          {incomingCall && callState === 'ringing' && (
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-secondary/40 px-4 py-3 text-sm">
-              <span className="inline-flex items-center gap-2"><Phone className="h-4 w-4" /> Incoming voice chat from @{incomingCall.from?.username}</span>
-              <div className="flex gap-2">
-                <Button size="sm" onClick={acceptVoiceCall}>Accept</Button>
-                <Button size="sm" variant="outline" onClick={() => cleanupVoiceCall(true)}>Decline</Button>
-              </div>
-            </div>
-          )}
 
           <div className="flex-1 space-y-3 overflow-y-auto p-4">
             {detailError ? (
@@ -477,6 +622,91 @@ function VoiceControls({ state, incoming, onStart, onAccept, onEnd }) {
   );
 }
 
+function CallOverlay({ state, friend, incoming, duration, muted, onAccept, onDecline, onEnd, onToggleMute }) {
+  if (state === 'idle' && !incoming) return null;
+
+  const displayName = friend?.displayName || friend?.username || incoming?.from?.username || 'Friend';
+  const username = friend?.username || incoming?.from?.username || 'friend';
+  const avatar = friend?.avatar || '';
+  const isRinging = state === 'ringing';
+  const isConnected = state === 'connected';
+  const status = isRinging
+    ? 'Incoming voice call'
+    : isConnected
+      ? `Connected · ${formatCallDuration(duration)}`
+      : state === 'calling'
+        ? 'Ringing...'
+        : 'Connecting audio...';
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-2xl">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.14),transparent_32%),radial-gradient(circle_at_bottom,rgba(255,255,255,0.08),transparent_34%)]" />
+      <div className="relative w-full max-w-md overflow-hidden rounded-[2rem] border border-white/15 bg-zinc-950/95 p-6 text-center shadow-[0_30px_100px_rgba(0,0,0,0.75)] sm:p-8">
+        <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-white/55 to-transparent" />
+        <div className="mx-auto mb-7 flex h-40 w-40 items-center justify-center rounded-full bg-white/[0.03]">
+          <div className="relative">
+            {(isRinging || state === 'calling') && (
+              <>
+                <span className="absolute inset-0 rounded-full border border-white/30 animate-ping" />
+                <span className="absolute -inset-5 rounded-full border border-white/10 animate-pulse" />
+              </>
+            )}
+            {avatar ? (
+              <img src={avatar} alt={displayName} className="relative h-28 w-28 rounded-full border border-white/15 object-cover shadow-2xl" />
+            ) : (
+              <div className="relative flex h-28 w-28 items-center justify-center rounded-full border border-white/15 bg-white text-4xl font-black text-black shadow-2xl">
+                {displayName.slice(0, 1).toUpperCase()}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <p className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs uppercase tracking-[0.18em] text-zinc-400">
+            <PhoneCall className="h-3.5 w-3.5" /> Voice call
+          </p>
+          <h2 className="font-display text-3xl font-semibold text-white">{displayName}</h2>
+          <p className="text-sm text-zinc-500">@{username}</p>
+          <p className="pt-2 text-sm font-medium text-zinc-300">{status}</p>
+        </div>
+
+        <div className="mt-8 flex items-center justify-center gap-3">
+          {isRinging ? (
+            <>
+              <Button type="button" size="lg" onClick={onAccept} className="rounded-full bg-white px-6 text-black hover:bg-zinc-200">
+                <Phone className="h-4 w-4" /> Accept
+              </Button>
+              <Button type="button" size="lg" variant="outline" onClick={onDecline} className="rounded-full border-red-500/40 bg-red-500/10 px-6 text-red-200 hover:bg-red-500/20">
+                <PhoneOff className="h-4 w-4" /> Decline
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                onClick={onToggleMute}
+                className={cn('h-12 w-12 rounded-full border-white/15 bg-white/[0.06]', muted && 'border-yellow-400/40 bg-yellow-400/15 text-yellow-100')}
+                aria-label={muted ? 'Unmute microphone' : 'Mute microphone'}
+              >
+                {muted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+              </Button>
+              <Button type="button" size="icon" onClick={onEnd} className="h-14 w-14 rounded-full bg-red-500 text-white shadow-[0_0_35px_rgba(239,68,68,0.45)] hover:bg-red-400" aria-label="End call">
+                <PhoneOff className="h-6 w-6" />
+              </Button>
+            </>
+          )}
+        </div>
+
+        <p className="mt-6 text-xs text-zinc-500">
+          Keep this page open while the call connects. Browser microphone permission is required.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function AttachmentCard({ attachment, mine }) {
   const name = attachment.originalName || 'Attachment';
   const mime = attachment.mimeType || '';
@@ -544,4 +774,10 @@ function formatBytes(bytes = 0) {
     unit += 1;
   }
   return `${value.toFixed(value >= 10 || unit === 0 ? 0 : 1)} ${units[unit]}`;
+}
+
+function formatCallDuration(seconds = 0) {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
 }

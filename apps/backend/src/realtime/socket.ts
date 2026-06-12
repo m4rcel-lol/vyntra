@@ -108,8 +108,10 @@ export function registerRealtime(io: SocketServer, prisma: PrismaClient): void {
       if (!user) return;
       const parsed = voiceSignalSchema.safeParse(payload);
       if (!parsed.success) return;
-      if (!(await canUseConversation(prisma, parsed.data.conversationId, user.id))) return;
-      socket.to(conversationRoom(parsed.data.conversationId)).emit(event, {
+      const conversation = await getConversationForUser(prisma, parsed.data.conversationId, user.id);
+      if (!conversation) return;
+      const recipientId = conversation.userAId === user.id ? conversation.userBId : conversation.userAId;
+      socket.to(conversationRoom(parsed.data.conversationId)).to(`user:${recipientId}`).emit(event, {
         ...parsed.data,
         from: { id: user.id, username: user.username }
       });
@@ -122,13 +124,18 @@ export function registerRealtime(io: SocketServer, prisma: PrismaClient): void {
 }
 
 async function canUseConversation(prisma: PrismaClient, conversationId: string, userId: string): Promise<boolean> {
-  const count = await prisma.directConversation.count({
+  const conversation = await getConversationForUser(prisma, conversationId, userId);
+  return !!conversation;
+}
+
+async function getConversationForUser(prisma: PrismaClient, conversationId: string, userId: string) {
+  return prisma.directConversation.findFirst({
     where: {
       id: conversationId,
       OR: [{ userAId: userId }, { userBId: userId }]
-    }
+    },
+    select: { id: true, userAId: true, userBId: true }
   });
-  return count === 1;
 }
 
 function conversationRoom(conversationId: string): string {
