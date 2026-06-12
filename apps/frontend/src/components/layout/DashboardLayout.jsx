@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { MobileBottomNav, Sidebar, SidebarContent } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
@@ -11,28 +12,36 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 export const DashboardLayout = ({ title, children, fluid = false }) => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const collapsed = useUIStore((s) => s.sidebarCollapsed);
   const mobileNavOpen = useUIStore((s) => s.mobileNavOpen);
   const setMobileNav = useUIStore((s) => s.setMobileNav);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const currentUser = useAuthStore((s) => s.user);
 
   useEffect(() => {
     if (!isAuthenticated) return undefined;
     return subscribeRealtime((event, payload) => {
       if (!['notification:new', 'message:new', 'support:accepted', 'support:message', 'support:closed', 'support:waiting', 'support:queue'].includes(event)) return;
-      playDing();
+      const ownMessageEvent = event === 'message:new' && payload?.message?.sender?.id === currentUser?.id;
+      if (!ownMessageEvent) playDing();
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       queryClient.invalidateQueries({ queryKey: ['messages'] });
       queryClient.invalidateQueries({ queryKey: ['support'] });
       queryClient.invalidateQueries({ queryKey: ['admin-support'] });
 
       if (event === 'notification:new' && payload?.title) {
-        toast(payload.title, { description: payload.body || undefined });
-        showBrowserNotification(payload.title, payload.body);
+        const open = () => payload.url && navigate(payload.url);
+        toast(payload.title, {
+          description: payload.body || undefined,
+          icon: payload.imageUrl ? <img src={payload.imageUrl} alt="" className="h-7 w-7 rounded-full object-cover" /> : undefined,
+          action: payload.url ? { label: 'Open', onClick: open } : undefined,
+        });
+        showBrowserNotification(payload.title, payload.body, payload.imageUrl, payload.url);
       }
     });
-  }, [isAuthenticated, queryClient]);
+  }, [currentUser?.id, isAuthenticated, navigate, queryClient]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -79,12 +88,18 @@ function playDing() {
   }
 }
 
-async function showBrowserNotification(title, body) {
+async function showBrowserNotification(title, body, icon, url) {
   if (!('Notification' in window)) return;
   if (Notification.permission === 'default') {
     await Notification.requestPermission().catch(() => null);
   }
   if (Notification.permission === 'granted') {
-    new Notification(title, { body: body || 'Vyntra notification' });
+    const notification = new Notification(title, { body: body || 'Vyntra notification', icon: icon || undefined });
+    if (url) {
+      notification.onclick = () => {
+        window.focus();
+        window.location.assign(url);
+      };
+    }
   }
 }

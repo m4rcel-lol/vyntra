@@ -104,9 +104,13 @@ export const Topbar = ({ title }) => {
                       onClick={() => item.url && navigate(item.url)}
                       className="flex w-full gap-3 rounded-md px-2 py-2.5 text-left text-sm hover:bg-accent"
                     >
-                      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-secondary/70">
-                        <ItemIcon className="h-4 w-4" />
-                      </div>
+                      {item.imageUrl ? (
+                        <img src={item.imageUrl} alt="" className="mt-0.5 h-8 w-8 shrink-0 rounded-lg object-cover" />
+                      ) : (
+                        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-secondary/70">
+                          <ItemIcon className="h-4 w-4" />
+                        </div>
+                      )}
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-medium">{item.title}</p>
                         <p className="line-clamp-2 text-xs text-muted-foreground">{item.body}</p>

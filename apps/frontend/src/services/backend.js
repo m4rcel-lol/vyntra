@@ -298,10 +298,11 @@ export const socialApi = {
     };
   },
 
-  async sendMessage(username, body) {
+  async sendMessage(username, payload) {
+    const messagePayload = typeof payload === 'string' ? { body: payload } : payload;
     const result = await api(`/api/messages/${encodeURIComponent(username)}`, {
       method: 'POST',
-      body: JSON.stringify({ body }),
+      body: JSON.stringify(messagePayload),
     });
     return {
       conversationId: result.conversationId,
@@ -859,6 +860,27 @@ function mapDirectMessage(message = {}) {
     readAt: message.readAt || null,
     createdAt: message.createdAt,
     sender: mapSocialUser(message.sender),
+    attachment: message.attachment ? mapAsset(message.attachment) : null,
+    replyTo: message.replyTo ? {
+      id: message.replyTo.id,
+      body: message.replyTo.body || '',
+      createdAt: message.replyTo.createdAt,
+      sender: mapSocialUser(message.replyTo.sender),
+      attachment: message.replyTo.attachment ? mapAsset(message.replyTo.attachment) : null,
+    } : null,
+  };
+}
+
+function mapAsset(asset = {}) {
+  return {
+    id: asset.id,
+    publicId: asset.publicId,
+    url: asset.url,
+    mimeType: asset.mimeType || 'application/octet-stream',
+    kind: String(asset.kind || 'OTHER').toLowerCase(),
+    originalName: asset.originalName || 'Attachment',
+    sizeBytes: asset.sizeBytes ?? 0,
+    metadata: asset.metadata || {},
   };
 }
 

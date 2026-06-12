@@ -8,7 +8,13 @@ import { serializeAsset } from "../lib/serialize.js";
 
 const usernameParams = z.object({ username: z.string().trim().min(1).max(40) });
 const conversationParams = z.object({ id: z.string().cuid() });
-const messageBody = z.object({ body: z.string().trim().min(1).max(2000) });
+const messageBody = z.object({
+  body: z.string().trim().max(2000).default(""),
+  replyToMessageId: z.string().cuid().optional().nullable(),
+  attachmentFileId: z.string().cuid().optional().nullable()
+}).refine((value) => value.body.length > 0 || !!value.attachmentFileId, {
+  message: "Message must include text or an attachment"
+});
 
 type PublicUserPayload = {
   id: string;
@@ -34,6 +40,17 @@ const publicUserInclude = {
     }
   }
 };
+
+const directMessageInclude = {
+  sender: { include: publicUserInclude },
+  attachment: true,
+  replyTo: {
+    include: {
+      sender: { include: publicUserInclude },
+      attachment: true
+    }
+  }
+} satisfies Prisma.DirectMessageInclude;
 
 export async function registerSocialRoutes(app: FastifyInstance): Promise<void> {
   app.get("/api/friends/me", async (request) => {
@@ -166,7 +183,7 @@ export async function registerSocialRoutes(app: FastifyInstance): Promise<void> 
         messages: {
           orderBy: { createdAt: "desc" },
           take: 1,
-          include: { sender: { include: publicUserInclude } }
+          include: directMessageInclude
         }
       },
       orderBy: { updatedAt: "desc" },
@@ -193,7 +210,7 @@ export async function registerSocialRoutes(app: FastifyInstance): Promise<void> 
         messages: {
           orderBy: { createdAt: "asc" },
           take: 200,
-          include: { sender: { include: publicUserInclude } }
+          include: directMessageInclude
         }
       }
     });
@@ -222,19 +239,52 @@ export async function registerSocialRoutes(app: FastifyInstance): Promise<void> 
       create: { pairKey: pair.key, userAId: pair.a, userBId: pair.b },
       update: {}
     });
+    const [attachment, actorPublic] = await Promise.all([
+      body.attachmentFileId
+        ? app.prisma.fileAsset.findFirst({
+            where: { id: body.attachmentFileId, ownerUserId: actor.id, deletedAt: null }
+          })
+        : null,
+      app.prisma.user.findUnique({ where: { id: actor.id }, include: publicUserInclude })
+    ]);
+    if (body.attachmentFileId && !attachment) fail(404, "ATTACHMENT_NOT_FOUND", "Attachment was not found");
+
+    if (body.replyToMessageId) {
+      const replyExists = await app.prisma.directMessage.count({
+        where: { id: body.replyToMessageId, conversationId: conversation.id }
+      });
+      if (replyExists !== 1) fail(400, "REPLY_NOT_FOUND", "The message you are replying to was not found");
+    }
+
     const message = await app.prisma.directMessage.create({
-      data: { conversationId: conversation.id, senderId: actor.id, body: body.body },
-      include: { sender: { include: publicUserInclude } }
+      data: {
+        conversationId: conversation.id,
+        senderId: actor.id,
+        body: body.body,
+        replyToMessageId: body.replyToMessageId ?? null,
+        attachmentFileId: attachment?.id ?? null
+      },
+      include: directMessageInclude
     });
     await app.prisma.directConversation.update({ where: { id: conversation.id }, data: { updatedAt: new Date() } });
+    const actorAvatarUrl = actorPublic ? serializePublicUser(request, actorPublic).avatar?.url ?? "" : "";
+    const messageText = body.body || (attachment ? `Sent ${attachment.originalName}` : "Sent an attachment");
     await createNotification(app, {
       userId: target.id,
       type: "message.new",
       title: `New message from ${actor.username}`,
-      body: body.body.slice(0, 140),
-      url: "/dashboard/messages"
+      body: messageText.slice(0, 140),
+      url: `/dashboard/messages?conversation=${conversation.id}`,
+      imageUrl: actorAvatarUrl
     });
-    const payload = { conversationId: conversation.id, message: serializeDirectMessage(request, message) };
+    const payload = {
+      conversationId: conversation.id,
+      senderId: actor.id,
+      recipientId: target.id,
+      url: `/dashboard/messages?conversation=${conversation.id}`,
+      imageUrl: actorAvatarUrl,
+      message: serializeDirectMessage(request, message)
+    };
     app.io.to(`user:${target.id}`).emit("message:new", payload);
     app.io.to(`user:${actor.id}`).emit("message:new", payload);
     return { conversationId: conversation.id, message: payload.message };
@@ -280,14 +330,24 @@ function serializePublicUser(request: FastifyRequest, user: PublicUserPayload) {
 
 function serializeDirectMessage(
   request: FastifyRequest,
-  message: Prisma.DirectMessageGetPayload<{ include: { sender: { include: typeof publicUserInclude } } }>
+  message: Prisma.DirectMessageGetPayload<{ include: typeof directMessageInclude }>
 ) {
   return {
     id: message.id,
     body: message.body,
     readAt: message.readAt,
     createdAt: message.createdAt,
-    sender: serializePublicUser(request, message.sender)
+    sender: serializePublicUser(request, message.sender),
+    attachment: serializeAsset(request, message.attachment),
+    replyTo: message.replyTo
+      ? {
+          id: message.replyTo.id,
+          body: message.replyTo.body,
+          createdAt: message.replyTo.createdAt,
+          sender: serializePublicUser(request, message.replyTo.sender),
+          attachment: serializeAsset(request, message.replyTo.attachment)
+        }
+      : null
   };
 }
 
@@ -297,7 +357,7 @@ function serializeConversation(
     include: {
       userA: { include: typeof publicUserInclude };
       userB: { include: typeof publicUserInclude };
-      messages: { include: { sender: { include: typeof publicUserInclude } } };
+      messages: { include: typeof directMessageInclude };
     };
   }>,
   actorUserId: string

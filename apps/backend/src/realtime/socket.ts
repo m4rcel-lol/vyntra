@@ -1,7 +1,22 @@
 import type { PrismaClient } from "@prisma/client";
 import type { Server as SocketServer } from "socket.io";
+import { z } from "zod";
 import { env } from "../env.js";
 import { sha256 } from "../lib/crypto.js";
+
+const conversationEventSchema = z.object({
+  conversationId: z.string().cuid()
+});
+
+const typingEventSchema = conversationEventSchema.extend({
+  isTyping: z.boolean().default(false)
+});
+
+const voiceSignalSchema = conversationEventSchema.extend({
+  offer: z.unknown().optional(),
+  answer: z.unknown().optional(),
+  candidate: z.unknown().optional()
+});
 
 export function registerRealtime(io: SocketServer, prisma: PrismaClient): void {
   io.use(async (socket, next) => {
@@ -52,10 +67,72 @@ export function registerRealtime(io: SocketServer, prisma: PrismaClient): void {
       }
     });
 
+    socket.on("messages:join", async (payload: unknown) => {
+      if (!user) return;
+      const parsed = conversationEventSchema.safeParse(payload);
+      if (!parsed.success) return;
+      if (!(await canUseConversation(prisma, parsed.data.conversationId, user.id))) return;
+      socket.join(conversationRoom(parsed.data.conversationId));
+    });
+
+    socket.on("messages:typing", async (payload: unknown) => {
+      if (!user) return;
+      const parsed = typingEventSchema.safeParse(payload);
+      if (!parsed.success) return;
+      if (!(await canUseConversation(prisma, parsed.data.conversationId, user.id))) return;
+      socket.to(conversationRoom(parsed.data.conversationId)).emit("messages:typing", {
+        conversationId: parsed.data.conversationId,
+        userId: user.id,
+        username: user.username,
+        isTyping: parsed.data.isTyping
+      });
+    });
+
+    socket.on("voice:offer", async (payload: unknown) => {
+      await relayVoiceSignal("voice:offer", payload);
+    });
+
+    socket.on("voice:answer", async (payload: unknown) => {
+      await relayVoiceSignal("voice:answer", payload);
+    });
+
+    socket.on("voice:ice", async (payload: unknown) => {
+      await relayVoiceSignal("voice:ice", payload);
+    });
+
+    socket.on("voice:end", async (payload: unknown) => {
+      await relayVoiceSignal("voice:end", payload);
+    });
+
+    async function relayVoiceSignal(event: "voice:offer" | "voice:answer" | "voice:ice" | "voice:end", payload: unknown) {
+      if (!user) return;
+      const parsed = voiceSignalSchema.safeParse(payload);
+      if (!parsed.success) return;
+      if (!(await canUseConversation(prisma, parsed.data.conversationId, user.id))) return;
+      socket.to(conversationRoom(parsed.data.conversationId)).emit(event, {
+        ...parsed.data,
+        from: { id: user.id, username: user.username }
+      });
+    }
+
     socket.on("disconnect", () => {
       if (user) io.emit("presence:offline", { username: user.username });
     });
   });
+}
+
+async function canUseConversation(prisma: PrismaClient, conversationId: string, userId: string): Promise<boolean> {
+  const count = await prisma.directConversation.count({
+    where: {
+      id: conversationId,
+      OR: [{ userAId: userId }, { userBId: userId }]
+    }
+  });
+  return count === 1;
+}
+
+function conversationRoom(conversationId: string): string {
+  return `conversation:${conversationId}`;
 }
 
 function parseCookie(header: string): Record<string, string> {

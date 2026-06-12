@@ -1,6 +1,20 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { MessageCircle, Search, Send } from 'lucide-react';
+import {
+  Download,
+  File as FileIcon,
+  Loader2,
+  MessageCircle,
+  Mic,
+  Paperclip,
+  Phone,
+  PhoneOff,
+  Reply,
+  Search,
+  Send,
+  X,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { GlassCard } from '@/components/common/GlassCard';
@@ -8,6 +22,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { socialService } from '@/services/social.service';
+import { filesService } from '@/services/files.service';
+import { emitRealtime, subscribeRealtime } from '@/services/realtime.service';
 import { useAuthStore } from '@/stores/auth.store';
 import { formatRelative } from '@/utils/format';
 import { cn } from '@/lib/utils';
@@ -15,36 +31,132 @@ import { cn } from '@/lib/utils';
 export default function MessagesPage() {
   const queryClient = useQueryClient();
   const currentUser = useAuthStore((s) => s.user);
-  const [selectedId, setSelectedId] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [selectedId, setSelectedId] = useState(searchParams.get('conversation') || '');
   const [targetUsername, setTargetUsername] = useState('');
   const [body, setBody] = useState('');
+  const [replyTo, setReplyTo] = useState(null);
+  const [attachmentFile, setAttachmentFile] = useState(null);
+  const [typingUsers, setTypingUsers] = useState({});
+  const [callState, setCallState] = useState('idle');
+  const [incomingCall, setIncomingCall] = useState(null);
+  const fileInputRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+  const typingClearTimersRef = useRef({});
+  const peerRef = useRef(null);
+  const localStreamRef = useRef(null);
+  const remoteAudioRef = useRef(null);
 
   const { data: conversations = [], isLoading } = useQuery({
     queryKey: ['messages', 'conversations'],
     queryFn: socialService.conversations,
     refetchInterval: 20_000,
   });
-  const activeConversation = conversations.find((conversation) => conversation.id === selectedId) || conversations[0] || null;
+  const manualRecipient = targetUsername.trim();
+  const activeConversation = selectedId
+    ? conversations.find((conversation) => conversation.id === selectedId) || null
+    : manualRecipient
+      ? null
+      : conversations[0] || null;
+  const activeConversationId = selectedId || activeConversation?.id || '';
 
   useEffect(() => {
-    if (!selectedId && conversations[0]) setSelectedId(conversations[0].id);
-  }, [conversations, selectedId]);
+    const fromUrl = searchParams.get('conversation') || '';
+    if (fromUrl && fromUrl !== selectedId) setSelectedId(fromUrl);
+  }, [searchParams, selectedId]);
+
+  useEffect(() => {
+    if (!selectedId && !manualRecipient && conversations[0]) {
+      setSelectedConversation(conversations[0].id);
+    }
+  }, [conversations, manualRecipient, selectedId]);
 
   const { data: detail } = useQuery({
-    queryKey: ['messages', selectedId || activeConversation?.id],
-    queryFn: () => socialService.conversation(selectedId || activeConversation.id),
-    enabled: !!(selectedId || activeConversation?.id),
+    queryKey: ['messages', activeConversationId],
+    queryFn: () => socialService.conversation(activeConversationId),
+    enabled: !!activeConversationId,
     refetchInterval: 15_000,
   });
   const friend = detail?.conversation?.friend || activeConversation?.friend || null;
   const messages = detail?.messages ?? [];
 
+  const typingNames = useMemo(
+    () => Object.values(typingUsers).filter(Boolean).join(', '),
+    [typingUsers]
+  );
+
+  useEffect(() => {
+    if (!activeConversationId) return undefined;
+    emitRealtime('messages:join', { conversationId: activeConversationId }).catch(() => null);
+    return () => {
+      emitRealtime('messages:typing', { conversationId: activeConversationId, isTyping: false }).catch(() => null);
+    };
+  }, [activeConversationId]);
+
+  useEffect(() => {
+    return subscribeRealtime((event, payload) => {
+      if (event === 'message:new') {
+        queryClient.invalidateQueries({ queryKey: ['messages', 'conversations'] });
+        if (payload?.conversationId) {
+          queryClient.invalidateQueries({ queryKey: ['messages', payload.conversationId] });
+        }
+      }
+
+      if (event === 'messages:typing' && payload?.conversationId === activeConversationId && payload.userId !== currentUser?.id) {
+        setTypingUsers((current) => {
+          const next = { ...current };
+          if (payload.isTyping) next[payload.userId] = payload.username;
+          else delete next[payload.userId];
+          return next;
+        });
+        window.clearTimeout(typingClearTimersRef.current[payload.userId]);
+        if (payload.isTyping) {
+          typingClearTimersRef.current[payload.userId] = window.setTimeout(() => {
+            setTypingUsers((current) => {
+              const next = { ...current };
+              delete next[payload.userId];
+              return next;
+            });
+          }, 3500);
+        }
+      }
+
+      if (payload?.conversationId !== activeConversationId || payload?.from?.id === currentUser?.id) return;
+      if (event === 'voice:offer') {
+        setIncomingCall(payload);
+        setCallState((state) => (state === 'idle' ? 'ringing' : state));
+      }
+      if (event === 'voice:answer' && payload.answer) {
+        peerRef.current?.setRemoteDescription(new RTCSessionDescription(payload.answer)).catch(() => null);
+        setCallState('connected');
+      }
+      if (event === 'voice:ice' && payload.candidate) {
+        peerRef.current?.addIceCandidate(new RTCIceCandidate(payload.candidate)).catch(() => null);
+      }
+      if (event === 'voice:end') {
+        cleanupVoiceCall(false);
+        toast.info(`${payload.from?.username || 'Your friend'} ended the voice chat`);
+      }
+    });
+  }, [activeConversationId, currentUser?.id, queryClient]);
+
+  useEffect(() => () => cleanupVoiceCall(false), []);
+
   const sendMessage = useMutation({
-    mutationFn: () => socialService.sendMessage((friend?.username || targetUsername).trim(), body),
+    mutationFn: async () => {
+      const uploaded = attachmentFile ? await filesService.uploadFile(attachmentFile, 'OTHER') : null;
+      return socialService.sendMessage((friend?.username || targetUsername).trim(), {
+        body,
+        replyToMessageId: replyTo?.id || undefined,
+        attachmentFileId: uploaded?.id || undefined,
+      });
+    },
     onSuccess: async (result) => {
       setBody('');
+      setReplyTo(null);
+      setAttachmentFile(null);
       setTargetUsername('');
-      setSelectedId(result.conversationId);
+      setSelectedConversation(result.conversationId);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['messages', 'conversations'] }),
         queryClient.invalidateQueries({ queryKey: ['messages', result.conversationId] }),
@@ -53,19 +165,126 @@ export default function MessagesPage() {
     onError: (error) => toast.error(error.message || 'Could not send message'),
   });
 
-  const recipient = friend?.username || targetUsername.trim();
-  const canSend = recipient && body.trim() && !sendMessage.isPending;
+  const recipient = friend?.username || manualRecipient;
+  const canSend = !!recipient && (!!body.trim() || !!attachmentFile) && !sendMessage.isPending;
+
+  function setSelectedConversation(id) {
+    setSelectedId(id);
+    setSearchParams(id ? { conversation: id } : {});
+    setTargetUsername('');
+    setTypingUsers({});
+  }
+
+  function updateBody(value) {
+    setBody(value);
+    if (!activeConversationId) return;
+    emitRealtime('messages:typing', { conversationId: activeConversationId, isTyping: true }).catch(() => null);
+    window.clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = window.setTimeout(() => {
+      emitRealtime('messages:typing', { conversationId: activeConversationId, isTyping: false }).catch(() => null);
+    }, 1200);
+  }
+
+  function submitMessage() {
+    if (!canSend) return;
+    emitRealtime('messages:typing', { conversationId: activeConversationId, isTyping: false }).catch(() => null);
+    sendMessage.mutate();
+  }
+
+  async function startVoiceCall() {
+    if (!activeConversationId || !friend) return;
+    try {
+      const stream = await window.navigator.mediaDevices.getUserMedia({ audio: true });
+      const peer = createPeer(activeConversationId);
+      localStreamRef.current = stream;
+      stream.getTracks().forEach((track) => peer.addTrack(track, stream));
+      const offer = await peer.createOffer();
+      await peer.setLocalDescription(offer);
+      await emitRealtime('voice:offer', { conversationId: activeConversationId, offer });
+      setCallState('calling');
+      toast.info(`Calling @${friend.username}...`);
+    } catch (error) {
+      cleanupVoiceCall(false);
+      toast.error(error?.message || 'Could not start voice chat');
+    }
+  }
+
+  async function acceptVoiceCall() {
+    if (!incomingCall?.offer || !activeConversationId) return;
+    try {
+      const stream = await window.navigator.mediaDevices.getUserMedia({ audio: true });
+      const peer = createPeer(activeConversationId);
+      localStreamRef.current = stream;
+      stream.getTracks().forEach((track) => peer.addTrack(track, stream));
+      await peer.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
+      const answer = await peer.createAnswer();
+      await peer.setLocalDescription(answer);
+      await emitRealtime('voice:answer', { conversationId: activeConversationId, answer });
+      setIncomingCall(null);
+      setCallState('connected');
+    } catch (error) {
+      cleanupVoiceCall(true);
+      toast.error(error?.message || 'Could not join voice chat');
+    }
+  }
+
+  function createPeer(conversationId) {
+    cleanupVoiceCall(false);
+    const peer = new RTCPeerConnection({ iceServers: [] });
+    peerRef.current = peer;
+    peer.onicecandidate = (event) => {
+      if (event.candidate) {
+        emitRealtime('voice:ice', { conversationId, candidate: event.candidate }).catch(() => null);
+      }
+    };
+    peer.ontrack = (event) => {
+      if (remoteAudioRef.current && event.streams[0]) {
+        remoteAudioRef.current.srcObject = event.streams[0];
+        remoteAudioRef.current.play().catch(() => null);
+      }
+      setCallState('connected');
+    };
+    peer.onconnectionstatechange = () => {
+      if (['failed', 'closed', 'disconnected'].includes(peer.connectionState)) cleanupVoiceCall(false);
+    };
+    return peer;
+  }
+
+  function cleanupVoiceCall(notifyPeer = true) {
+    if (notifyPeer && activeConversationId && callState !== 'idle') {
+      emitRealtime('voice:end', { conversationId: activeConversationId }).catch(() => null);
+    }
+    localStreamRef.current?.getTracks().forEach((track) => track.stop());
+    localStreamRef.current = null;
+    peerRef.current?.close();
+    peerRef.current = null;
+    if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
+    setIncomingCall(null);
+    setCallState('idle');
+  }
 
   return (
     <DashboardLayout title="Messages" fluid>
+      <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
       <div className="grid min-h-[calc(100vh-8rem)] gap-4 lg:grid-cols-[22rem_1fr]">
         <GlassCard className="overflow-hidden">
           <div className="border-b border-border p-4">
             <h2 className="font-display text-xl font-semibold">Friends chat</h2>
-            <p className="text-sm text-muted-foreground">Messages are saved and delivered in realtime while you are online.</p>
+            <p className="text-sm text-muted-foreground">Reply, attach files, and talk live with accepted friends.</p>
             <div className="relative mt-4">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input value={targetUsername} onChange={(event) => setTargetUsername(event.target.value)} placeholder="Message @username" className="pl-9" />
+              <Input
+                value={targetUsername}
+                onChange={(event) => {
+                  setTargetUsername(event.target.value);
+                  if (event.target.value.trim()) {
+                    setSelectedId('');
+                    setSearchParams({});
+                  }
+                }}
+                placeholder="Message @username"
+                className="pl-9"
+              />
             </div>
           </div>
           <div className="max-h-[64vh] overflow-y-auto p-2">
@@ -75,7 +294,7 @@ export default function MessagesPage() {
               <button
                 key={conversation.id}
                 type="button"
-                onClick={() => { setSelectedId(conversation.id); setTargetUsername(''); }}
+                onClick={() => setSelectedConversation(conversation.id)}
                 className={cn(
                   'flex w-full items-center gap-3 rounded-xl p-3 text-left transition-colors hover:bg-secondary/50',
                   activeConversation?.id === conversation.id && 'bg-secondary/70'
@@ -84,7 +303,7 @@ export default function MessagesPage() {
                 <img src={conversation.friend.avatar} alt={conversation.friend.displayName} className="h-10 w-10 rounded-xl object-cover" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{conversation.friend.displayName}</p>
-                  <p className="truncate text-xs text-muted-foreground">{conversation.lastMessage?.body || 'No messages yet'}</p>
+                  <p className="truncate text-xs text-muted-foreground">{previewMessage(conversation.lastMessage)}</p>
                 </div>
               </button>
             )) : (
@@ -94,14 +313,21 @@ export default function MessagesPage() {
         </GlassCard>
 
         <GlassCard className="flex min-h-[34rem] flex-col overflow-hidden">
-          <div className="flex items-center gap-3 border-b border-border p-4">
+          <div className="flex flex-wrap items-center gap-3 border-b border-border p-4">
             {friend ? (
               <>
                 <img src={friend.avatar} alt={friend.displayName} className="h-10 w-10 rounded-xl object-cover" />
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <h2 className="truncate font-display text-lg font-semibold">{friend.displayName}</h2>
                   <p className="text-xs text-muted-foreground">@{friend.username}</p>
                 </div>
+                <VoiceControls
+                  state={callState}
+                  incoming={incomingCall}
+                  onStart={startVoiceCall}
+                  onAccept={acceptVoiceCall}
+                  onEnd={() => cleanupVoiceCall(true)}
+                />
               </>
             ) : (
               <div>
@@ -111,14 +337,44 @@ export default function MessagesPage() {
             )}
           </div>
 
+          {incomingCall && callState === 'ringing' && (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-secondary/40 px-4 py-3 text-sm">
+              <span className="inline-flex items-center gap-2"><Phone className="h-4 w-4" /> Incoming voice chat from @{incomingCall.from?.username}</span>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={acceptVoiceCall}>Accept</Button>
+                <Button size="sm" variant="outline" onClick={() => cleanupVoiceCall(true)}>Decline</Button>
+              </div>
+            </div>
+          )}
+
           <div className="flex-1 space-y-3 overflow-y-auto p-4">
             {messages.length ? messages.map((message) => {
               const mine = message.sender.id === currentUser?.id || message.sender.username === currentUser?.username;
               return (
-                <div key={message.id} className={cn('flex', mine ? 'justify-end' : 'justify-start')}>
+                <div key={message.id} className={cn('group flex gap-2', mine ? 'justify-end' : 'justify-start')}>
+                  {!mine && <img src={message.sender.avatar} alt="" className="mt-1 h-8 w-8 rounded-lg object-cover" />}
                   <div className={cn('max-w-[82%] rounded-2xl border px-4 py-2.5 text-sm shadow-soft', mine ? 'border-white/15 bg-white text-black' : 'border-border bg-secondary/50')}>
-                    <p className="whitespace-pre-wrap break-words">{message.body}</p>
-                    <p className={cn('mt-1 text-[11px]', mine ? 'text-black/55' : 'text-muted-foreground')}>{formatRelative(message.createdAt)}</p>
+                    {message.replyTo && (
+                      <button
+                        type="button"
+                        onClick={() => setReplyTo(message.replyTo)}
+                        className={cn('mb-2 block w-full rounded-lg border px-3 py-2 text-left text-xs', mine ? 'border-black/10 bg-black/5 text-black/70' : 'border-white/10 bg-black/15 text-muted-foreground')}
+                      >
+                        Replying to @{message.replyTo.sender.username}: {previewMessage(message.replyTo)}
+                      </button>
+                    )}
+                    {message.body && <p className="whitespace-pre-wrap break-words">{message.body}</p>}
+                    {message.attachment && <AttachmentCard attachment={message.attachment} mine={mine} />}
+                    <div className="mt-1 flex items-center justify-between gap-3">
+                      <p className={cn('text-[11px]', mine ? 'text-black/55' : 'text-muted-foreground')}>{formatRelative(message.createdAt)}</p>
+                      <button
+                        type="button"
+                        onClick={() => setReplyTo(message)}
+                        className={cn('inline-flex items-center gap-1 text-[11px] opacity-80 transition hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100', mine ? 'text-black/60' : 'text-muted-foreground')}
+                      >
+                        <Reply className="h-3 w-3" /> Reply
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -130,11 +386,55 @@ export default function MessagesPage() {
             )}
           </div>
 
-          <form className="border-t border-border p-4" onSubmit={(event) => { event.preventDefault(); if (canSend) sendMessage.mutate(); }}>
+          {typingNames && (
+            <div className="border-t border-border px-4 py-2 text-xs text-muted-foreground">
+              {typingNames} {typingNames.includes(',') ? 'are' : 'is'} typing...
+            </div>
+          )}
+
+          <form className="border-t border-border p-4" onSubmit={(event) => { event.preventDefault(); submitMessage(); }}>
+            {replyTo && (
+              <div className="mb-2 flex items-center justify-between gap-3 rounded-xl border border-border bg-secondary/35 px-3 py-2 text-xs">
+                <span className="min-w-0 truncate">Replying to @{replyTo.sender.username}: {previewMessage(replyTo)}</span>
+                <button type="button" onClick={() => setReplyTo(null)} className="shrink-0 text-muted-foreground hover:text-foreground">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+            {attachmentFile && (
+              <div className="mb-2 flex items-center justify-between gap-3 rounded-xl border border-border bg-secondary/35 px-3 py-2 text-xs">
+                <span className="min-w-0 truncate"><Paperclip className="mr-1 inline h-3.5 w-3.5" /> {attachmentFile.name}</span>
+                <button type="button" onClick={() => setAttachmentFile(null)} className="shrink-0 text-muted-foreground hover:text-foreground">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Textarea value={body} onChange={(event) => setBody(event.target.value)} rows={2} placeholder={recipient ? `Message @${recipient}` : 'Choose a friend first'} className="min-h-12 flex-1 resize-none" />
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={(event) => setAttachmentFile(event.target.files?.[0] || null)}
+                accept="image/*,video/mp4,video/webm,audio/*"
+              />
+              <Button type="button" variant="outline" size="icon" className="sm:self-end" onClick={() => fileInputRef.current?.click()} disabled={!recipient || sendMessage.isPending} aria-label="Attach file">
+                <Paperclip className="h-4 w-4" />
+              </Button>
+              <Textarea
+                value={body}
+                onChange={(event) => updateBody(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && event.ctrlKey) {
+                    event.preventDefault();
+                    submitMessage();
+                  }
+                }}
+                rows={2}
+                placeholder={recipient ? `Message @${recipient}. Ctrl+Enter sends.` : 'Choose a friend first'}
+                className="min-h-12 flex-1 resize-none"
+              />
               <Button type="submit" disabled={!canSend} className="sm:self-end">
-                <Send className="h-4 w-4" /> Send
+                {sendMessage.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Send
               </Button>
             </div>
           </form>
@@ -142,4 +442,96 @@ export default function MessagesPage() {
       </div>
     </DashboardLayout>
   );
+}
+
+function VoiceControls({ state, incoming, onStart, onAccept, onEnd }) {
+  if (incoming && state === 'ringing') {
+    return (
+      <div className="flex gap-2">
+        <Button size="sm" onClick={onAccept}><Phone className="h-4 w-4" /> Accept</Button>
+        <Button size="sm" variant="outline" onClick={onEnd}><PhoneOff className="h-4 w-4" /> Decline</Button>
+      </div>
+    );
+  }
+  if (state !== 'idle') {
+    return (
+      <Button size="sm" variant="outline" onClick={onEnd} className="text-destructive hover:text-destructive">
+        <PhoneOff className="h-4 w-4" /> {state === 'connected' ? 'End call' : 'Cancel'}
+      </Button>
+    );
+  }
+  return (
+    <Button size="sm" variant="outline" onClick={onStart}>
+      <Mic className="h-4 w-4" /> Voice
+    </Button>
+  );
+}
+
+function AttachmentCard({ attachment, mine }) {
+  const name = attachment.originalName || 'Attachment';
+  const mime = attachment.mimeType || '';
+  const commonClass = cn('mt-2 overflow-hidden rounded-xl border', mine ? 'border-black/10 bg-black/5' : 'border-white/10 bg-black/15');
+
+  if (mime.startsWith('image/')) {
+    return (
+      <a href={attachment.url} target="_blank" rel="noreferrer" className={commonClass}>
+        <img src={attachment.url} alt={name} className="max-h-64 w-full object-cover" loading="lazy" />
+        <AttachmentFooter attachment={attachment} mine={mine} />
+      </a>
+    );
+  }
+  if (mime.startsWith('audio/')) {
+    return (
+      <div className={cn(commonClass, 'p-3')}>
+        <audio src={attachment.url} controls className="w-full" />
+        <AttachmentFooter attachment={attachment} mine={mine} />
+      </div>
+    );
+  }
+  if (mime.startsWith('video/')) {
+    return (
+      <div className={commonClass}>
+        <video src={attachment.url} controls className="max-h-72 w-full" />
+        <AttachmentFooter attachment={attachment} mine={mine} />
+      </div>
+    );
+  }
+  return (
+    <a href={attachment.url} target="_blank" rel="noreferrer" className={cn(commonClass, 'flex items-center gap-3 p-3')}>
+      <FileIcon className="h-5 w-5 shrink-0" />
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-medium">{name}</p>
+        <p className={cn('text-xs', mine ? 'text-black/55' : 'text-muted-foreground')}>{formatBytes(attachment.sizeBytes)}</p>
+      </div>
+      <Download className="h-4 w-4 shrink-0" />
+    </a>
+  );
+}
+
+function AttachmentFooter({ attachment, mine }) {
+  return (
+    <div className={cn('flex items-center justify-between gap-3 px-3 py-2 text-xs', mine ? 'text-black/60' : 'text-muted-foreground')}>
+      <span className="truncate">{attachment.originalName || 'Attachment'}</span>
+      <span className="shrink-0">{formatBytes(attachment.sizeBytes)}</span>
+    </div>
+  );
+}
+
+function previewMessage(message) {
+  if (!message) return 'No messages yet';
+  if (message.body) return message.body;
+  if (message.attachment) return `Attachment: ${message.attachment.originalName || 'file'}`;
+  return 'Message';
+}
+
+function formatBytes(bytes = 0) {
+  if (!bytes) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  return `${value.toFixed(value >= 10 || unit === 0 ? 0 : 1)} ${units[unit]}`;
 }

@@ -7,5 +7,5 @@ export const socialService = {
   removeFriend: (username) => socialApi.removeFriend(username),
   conversations: () => socialApi.conversations(),
   conversation: (id) => socialApi.conversation(id),
-  sendMessage: (username, body) => socialApi.sendMessage(username, body),
+  sendMessage: (username, payload) => socialApi.sendMessage(username, payload),
 };

@@ -8,6 +8,7 @@ export async function createNotification(
     title: string;
     body?: string;
     url?: string;
+    imageUrl?: string;
   }
 ) {
   const notification = await app.prisma.notification.create({
@@ -16,7 +17,8 @@ export async function createNotification(
       type: params.type,
       title: params.title,
       body: params.body ?? "",
-      url: params.url ?? ""
+      url: params.url ?? "",
+      imageUrl: params.imageUrl ?? ""
     }
   });
 

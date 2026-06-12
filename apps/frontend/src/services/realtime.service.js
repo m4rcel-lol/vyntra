@@ -4,6 +4,8 @@ const listeners = new Set();
 let running = false;
 let abortController = null;
 let reconnectTimer = null;
+let currentSid = '';
+const pendingOutbound = [];
 
 export function subscribeRealtime(listener) {
   listeners.add(listener);
@@ -25,6 +27,7 @@ function startRealtime() {
   abortController = new AbortController();
   void connectPolling(abortController.signal).catch(() => {
     if (!running) return;
+    currentSid = '';
     reconnectTimer = window.setTimeout(startRealtime, 2500);
   });
 }
@@ -33,8 +36,20 @@ function stopRealtime() {
   running = false;
   if (reconnectTimer) window.clearTimeout(reconnectTimer);
   reconnectTimer = null;
+  currentSid = '';
+  pendingOutbound.length = 0;
   abortController?.abort();
   abortController = null;
+}
+
+export async function emitRealtime(event, payload = {}) {
+  if (!running) startRealtime();
+  const packet = `42${JSON.stringify([event, payload])}`;
+  if (!currentSid) {
+    pendingOutbound.push(packet);
+    return;
+  }
+  await socketPost(currentSid, packet, abortController?.signal);
 }
 
 async function connectPolling(signal) {
@@ -44,6 +59,10 @@ async function connectPolling(signal) {
   const session = JSON.parse(openPacket.slice(1));
   const sid = session.sid;
   await socketPost(sid, '40', signal);
+  currentSid = sid;
+  while (pendingOutbound.length) {
+    await socketPost(sid, pendingOutbound.shift(), signal);
+  }
 
   while (running && !signal.aborted) {
     const payload = await socketFetch(`&sid=${encodeURIComponent(sid)}`, signal);
