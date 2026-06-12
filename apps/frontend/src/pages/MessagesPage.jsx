@@ -47,7 +47,7 @@ export default function MessagesPage() {
   const localStreamRef = useRef(null);
   const remoteAudioRef = useRef(null);
 
-  const { data: conversations = [], isLoading } = useQuery({
+  const { data: conversations = [], isLoading, isError: conversationsError, error: conversationsErrorValue } = useQuery({
     queryKey: ['messages', 'conversations'],
     queryFn: socialService.conversations,
     refetchInterval: 20_000,
@@ -66,15 +66,19 @@ export default function MessagesPage() {
   }, [searchParams, selectedId]);
 
   useEffect(() => {
+    if (selectedId && !isLoading && conversations.length && !conversations.some((conversation) => conversation.id === selectedId)) {
+      setSelectedConversation(conversations[0].id);
+      return;
+    }
     if (!selectedId && !manualRecipient && conversations[0]) {
       setSelectedConversation(conversations[0].id);
     }
-  }, [conversations, manualRecipient, selectedId]);
+  }, [conversations, isLoading, manualRecipient, selectedId]);
 
-  const { data: detail } = useQuery({
+  const { data: detail, isError: detailError, error: detailErrorValue } = useQuery({
     queryKey: ['messages', activeConversationId],
     queryFn: () => socialService.conversation(activeConversationId),
-    enabled: !!activeConversationId,
+    enabled: !!activeConversationId && !!activeConversation,
     refetchInterval: 15_000,
   });
   const friend = detail?.conversation?.friend || activeConversation?.friend || null;
@@ -288,7 +292,9 @@ export default function MessagesPage() {
             </div>
           </div>
           <div className="max-h-[64vh] overflow-y-auto p-2">
-            {isLoading ? (
+            {conversationsError ? (
+              <div className="p-6 text-center text-sm text-destructive">{conversationsErrorValue?.message || 'Could not load conversations.'}</div>
+            ) : isLoading ? (
               <p className="p-4 text-sm text-muted-foreground">Loading conversations...</p>
             ) : conversations.length ? conversations.map((conversation) => (
               <button
@@ -348,7 +354,11 @@ export default function MessagesPage() {
           )}
 
           <div className="flex-1 space-y-3 overflow-y-auto p-4">
-            {messages.length ? messages.map((message) => {
+            {detailError ? (
+              <div className="flex h-full flex-col items-center justify-center px-6 text-center text-sm text-destructive">
+                {detailErrorValue?.message || 'Could not load this conversation.'}
+              </div>
+            ) : messages.length ? messages.map((message) => {
               const mine = message.sender.id === currentUser?.id || message.sender.username === currentUser?.username;
               return (
                 <div key={message.id} className={cn('group flex gap-2', mine ? 'justify-end' : 'justify-start')}>

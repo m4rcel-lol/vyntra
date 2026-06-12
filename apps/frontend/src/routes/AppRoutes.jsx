@@ -34,20 +34,19 @@ const ScrollToTop = () => {
 };
 
 export const AppRoutes = () => {
-  const { pathname } = useLocation();
   const refresh = useAuthStore((s) => s.refresh);
   const checked = useAuthStore((s) => s.checked);
 
   useEffect(() => {
-    refresh();
-  }, [pathname, refresh]);
+    if (!checked) refresh();
+  }, [checked, refresh]);
 
   if (!checked) return <LoadingScreen />;
 
   return (
     <>
       <ScrollToTop />
-      <Suspense fallback={<LoadingScreen />}>
+      <Suspense fallback={null}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<GuestOnly><LoginPage /></GuestOnly>} />
@@ -103,10 +102,9 @@ export const AppRoutes = () => {
 const Protected = ({ children }) => {
   const location = useLocation();
   const checked = useAuthStore((s) => s.checked);
-  const loading = useAuthStore((s) => s.loading);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
-  if (!checked || loading) return <LoadingScreen />;
+  if (!checked) return <LoadingScreen />;
   if (!isAuthenticated) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   return children;
 };
@@ -124,11 +122,10 @@ const GuestOnly = ({ children }) => {
 const AdminOnly = ({ children }) => {
   const location = useLocation();
   const checked = useAuthStore((s) => s.checked);
-  const loading = useAuthStore((s) => s.loading);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
 
-  if (!checked || loading) return <LoadingScreen />;
+  if (!checked) return <LoadingScreen />;
   if (!isAuthenticated) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   if (!['owner', 'admin'].includes(user?.role)) return <Navigate to="/dashboard" replace />;
   return children;
