@@ -50,12 +50,20 @@
  * @property {boolean} glowBorder
  * @property {boolean} floating
  * @property {boolean} particles
+ * @property {string} particleMode
+ * @property {number} particleDensity
+ * @property {number} particleSpeed
+ * @property {number} effectIntensity
  * @property {boolean} snow
  * @property {boolean} rain
  * @property {boolean} stars
  * @property {boolean} cursorTrail
+ * @property {string} cursorTrailMode
  * @property {boolean} clickToEnter
  * @property {boolean} pageEntrance
+ * @property {string} entranceAnimation
+ * @property {string} hoverAnimation
+ * @property {string} backgroundAnimation
  */
 
 /**

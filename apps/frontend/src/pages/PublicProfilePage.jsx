@@ -53,6 +53,27 @@ export default function PublicProfilePage() {
       });
   }, [profile, queryClient, username]);
 
+  useEffect(() => {
+    if (!profile) return undefined;
+    const previousTitle = document.title;
+    const title = profile.metadata?.title || `${profile.displayName || profile.username} · Vyntra`;
+    const description = profile.metadata?.description || profile.bio || 'A creator profile on Vyntra';
+    const image = profile.metadata?.ogImage || '';
+
+    document.title = title;
+    setMetaTag('name', 'description', description);
+    setMetaTag('property', 'og:title', title);
+    setMetaTag('property', 'og:description', description);
+    setMetaTag('property', 'og:type', 'profile');
+    setMetaTag('property', 'og:url', window.location.href);
+    if (image) setMetaTag('property', 'og:image', image);
+    else removeMetaTag('property', 'og:image');
+
+    return () => {
+      document.title = previousTitle;
+    };
+  }, [profile]);
+
   if (isLoading) return <LoadingScreen />;
 
   if (isError || !profile) {
@@ -122,4 +143,18 @@ export default function PublicProfilePage() {
       </Dialog>
     </div>
   );
+}
+
+function setMetaTag(attribute, key, content) {
+  let tag = document.head.querySelector(`meta[${attribute}="${key}"]`);
+  if (!tag) {
+    tag = document.createElement('meta');
+    tag.setAttribute(attribute, key);
+    document.head.appendChild(tag);
+  }
+  tag.setAttribute('content', content);
+}
+
+function removeMetaTag(attribute, key) {
+  document.head.querySelector(`meta[${attribute}="${key}"]`)?.remove();
 }

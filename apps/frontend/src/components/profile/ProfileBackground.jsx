@@ -3,13 +3,17 @@
  * with optional blur + dark overlay. Always sits behind content.
  */
 export const ProfileBackground = ({ background = {}, className = '' }) => {
-  const { type, color, gradient, image, video, blur = 0, overlay = 0 } = background;
+  const { type, color, gradient, image, video, blur = 0, overlay = 0, animation = 'none' } = background;
+  const animated = animation && animation !== 'none';
 
   return (
     <div className={`absolute inset-0 -z-10 overflow-hidden ${className}`} aria-hidden="true">
-      <div className="absolute inset-0" style={{ filter: blur ? `blur(${blur}px)` : undefined, transform: blur ? 'scale(1.06)' : undefined }}>
-        {type === 'solid' && <div className="h-full w-full" style={{ background: `hsl(${color})` }} />}
-        {type === 'gradient' && <div className="h-full w-full" style={{ background: gradient || `hsl(${color})` }} />}
+      <div
+        className={`absolute inset-0 ${animated ? `vy-bg-${animation}` : ''}`}
+        style={{ filter: blur ? `blur(${blur}px)` : undefined, transform: blur ? 'scale(1.06)' : undefined }}
+      >
+        {type === 'solid' && <div className="h-full w-full" style={{ background: `hsl(${color || '0 0% 4%'})` }} />}
+        {type === 'gradient' && <div className="h-full w-full" style={{ background: gradient || `hsl(${color || '0 0% 4%'})` }} />}
         {(type === 'image' || type === 'gif') && image && (
           <img src={image} alt="" className="h-full w-full object-cover" />
         )}
@@ -19,11 +23,11 @@ export const ProfileBackground = ({ background = {}, className = '' }) => {
           ) : image ? (
             <img src={image} alt="" className="h-full w-full object-cover" />
           ) : (
-            <div className="h-full w-full" style={{ background: `hsl(${color})` }} />
+            <div className="h-full w-full" style={{ background: `hsl(${color || '0 0% 4%'})` }} />
           )
         )}
         {((type === 'image' || type === 'gif' || type === 'video') && !image && !video) && (
-          <div className="h-full w-full" style={{ background: `hsl(${color})` }} />
+          <div className="h-full w-full" style={{ background: `hsl(${color || '0 0% 4%'})` }} />
         )}
       </div>
       {overlay > 0 && <div className="absolute inset-0 bg-black" style={{ opacity: overlay / 100 }} />}

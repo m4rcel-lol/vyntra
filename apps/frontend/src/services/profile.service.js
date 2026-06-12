@@ -9,5 +9,6 @@ export const profileService = {
   createLink: (link) => profileApi.createLink(link),
   updateLink: (id, patch) => profileApi.updateLink(id, patch),
   deleteLink: (id) => profileApi.deleteLink(id),
+  reorderLinks: (ids) => profileApi.reorderLinks(ids),
   listProfiles: () => profileApi.leaderboard(),
 };
