@@ -66,8 +66,19 @@ export default function PublicProfilePage() {
     setMetaTag('property', 'og:description', description);
     setMetaTag('property', 'og:type', 'profile');
     setMetaTag('property', 'og:url', window.location.href);
-    if (image) setMetaTag('property', 'og:image', image);
-    else removeMetaTag('property', 'og:image');
+    setMetaTag('name', 'twitter:card', image ? 'summary_large_image' : 'summary');
+    setMetaTag('name', 'twitter:title', title);
+    setMetaTag('name', 'twitter:description', description);
+    const absoluteImage = absoluteHttpUrl(image);
+    if (absoluteImage) {
+      setMetaTag('property', 'og:image', absoluteImage);
+      setMetaTag('property', 'og:image:secure_url', absoluteImage);
+      setMetaTag('name', 'twitter:image', absoluteImage);
+    } else {
+      removeMetaTag('property', 'og:image');
+      removeMetaTag('property', 'og:image:secure_url');
+      removeMetaTag('name', 'twitter:image');
+    }
 
     return () => {
       document.title = previousTitle;
@@ -157,4 +168,14 @@ function setMetaTag(attribute, key, content) {
 
 function removeMetaTag(attribute, key) {
   document.head.querySelector(`meta[${attribute}="${key}"]`)?.remove();
+}
+
+function absoluteHttpUrl(value) {
+  if (!value) return '';
+  try {
+    const url = new URL(value, window.location.origin);
+    return ['http:', 'https:'].includes(url.protocol) ? url.toString() : '';
+  } catch {
+    return '';
+  }
 }

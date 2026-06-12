@@ -146,6 +146,7 @@ For local backend development outside `npm run dev`, PostgreSQL and Valkey must 
 - Use long env-safe random values for `COOKIE_SECRET`, `POSTGRES_PASSWORD`, and `SEED_ADMIN_PASSWORD`.
 - Set `PUBLIC_APP_URL` and `FRONTEND_ORIGIN` to your public HTTPS URL.
 - Leave `VITE_API_URL` and `VITE_SOCKET_URL` empty unless you intentionally host the API on a separate public origin.
+- Profile URLs (`/u/:username`) are routed through the frontend nginx container to the backend so link previews can receive metadata from the editor's Metadata tab. In the default Docker Compose setup this works automatically; if you run backend and frontend separately, set `FRONTEND_SHELL_URL` to the frontend `index.html` URL.
 - Keep secrets in `.env`; the Compose file references environment variables and does not need hardcoded passwords.
 - Keep `TRUST_PROXY=true` when running behind Caddy, Nginx, or Traefik.
 - Terminate TLS at the reverse proxy and forward `/api/*`, `/socket.io/*`, and `/health` to the backend.

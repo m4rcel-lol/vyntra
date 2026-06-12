@@ -20,6 +20,7 @@ import { registerFileRoutes } from "./routes/files.js";
 import { registerForumRoutes } from "./routes/forums.js";
 import { registerNotificationRoutes } from "./routes/notifications.js";
 import { registerProfileRoutes } from "./routes/profiles.js";
+import { registerPublicPageRoutes } from "./routes/public-pages.js";
 import { registerReportRoutes } from "./routes/reports.js";
 import { registerSocialRoutes } from "./routes/social.js";
 import { registerSupportRoutes } from "./routes/support.js";
@@ -90,6 +91,7 @@ export async function buildApp() {
   }));
 
   await registerAuthRoutes(app);
+  await registerPublicPageRoutes(app);
   await registerBlogRoutes(app);
   await registerDashboardRoutes(app);
   await registerProfileRoutes(app);
