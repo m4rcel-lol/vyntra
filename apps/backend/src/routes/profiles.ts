@@ -2,18 +2,19 @@ import { randomBytes } from "node:crypto";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { secureCookies } from "../env.js";
+import { env, secureCookies } from "../env.js";
 import { requireUser } from "../lib/auth.js";
 import { sanitizeCustomCss } from "../lib/css.js";
-import { hashIp, hashVisitor } from "../lib/crypto.js";
+import { hashIp, hashVisitor, sha256 } from "../lib/crypto.js";
 import { fail } from "../lib/errors.js";
 import { getClientIp, getCountryFromHeaders, getReferrer, getVisitorHash, parseUserAgent } from "../lib/http.js";
 import { roleBadgeSlug, syncRoleBadgeForUser } from "../lib/role-badges.js";
 import { serializeAsset } from "../lib/serialize.js";
 import { metadataSchema, profileEffectsSchema, profileThemeSchema, urlSchema } from "../lib/validators.js";
-import { isRouteReserved, usernameSchema } from "../lib/username.js";
+import { isRouteReserved, normalizeUsername, usernameSchema } from "../lib/username.js";
 
 const profileUpdateSchema = z.object({
+  username: usernameSchema.optional(),
   displayName: z.string().trim().min(1).max(40).optional(),
   bio: z.string().max(500).optional(),
   location: z.string().max(80).optional(),
@@ -76,8 +77,19 @@ export async function registerProfileRoutes(app: FastifyInstance): Promise<void>
   app.patch("/api/profiles/me", async (request) => {
     const user = requireUser(request);
     const body = profileUpdateSchema.parse(request.body);
+    const nextUsername = body.username !== undefined ? normalizeUsername(body.username) : undefined;
     await validateProfileFiles(app, user.id, body);
     await validateMusicCoverFile(app, user.id, body.musicActivity);
+
+    if (nextUsername && nextUsername !== user.username) {
+      if (isRouteReserved(nextUsername)) {
+        fail(400, "USERNAME_RESERVED", "That username is reserved");
+      }
+      const reserved = await app.prisma.reservedUsername.findUnique({
+        where: { normalized: nextUsername }
+      });
+      if (reserved) fail(400, "USERNAME_RESERVED", "That username is reserved");
+    }
 
     if (body.aliasSlug) {
       if (isRouteReserved(body.aliasSlug)) {
@@ -114,13 +126,38 @@ export async function registerProfileRoutes(app: FastifyInstance): Promise<void>
     if (body.cursorFileId !== undefined) updateData.cursorFileId = body.cursorFileId;
     if (body.metadataFileId !== undefined) updateData.metadataFileId = body.metadataFileId;
 
-    const profile = await app.prisma.profile.update({
-      where: { userId: user.id },
-      data: updateData,
-      include: profileInclude(false)
-    });
+    let profile;
+    try {
+      profile = await app.prisma.$transaction(async (tx) => {
+        if (nextUsername && nextUsername !== user.username) {
+          await tx.user.update({
+            where: { id: user.id },
+            data: { username: nextUsername }
+          });
+          const sessionToken = request.cookies[env.SESSION_COOKIE_NAME];
+          if (sessionToken) {
+            await app.redis.del(`session:${sha256(sessionToken)}`);
+          }
+        }
+        return tx.profile.update({
+          where: { userId: user.id },
+          data: updateData,
+          include: profileInclude(false)
+        });
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError
+        && error.code === "P2002"
+        && Array.isArray(error.meta?.target)
+        && error.meta.target.includes("username")
+      ) {
+        fail(409, "USERNAME_TAKEN", "That username is already taken");
+      }
+      throw error;
+    }
 
-    app.io.to(`profile:${user.username}`).emit("profile:update", { username: user.username });
+    app.io.to(`profile:${profile.user.username}`).emit("profile:update", { username: profile.user.username });
     return serializeProfile(request, profile);
   });
 

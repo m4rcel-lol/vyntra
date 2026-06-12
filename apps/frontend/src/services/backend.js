@@ -623,7 +623,7 @@ function mapProfileResponse(response) {
     links: (response.links ?? []).map(mapLink),
     badges: (response.badges ?? []).map(mapBadge),
     music: {
-      enabled: hasMusic,
+      enabled: hasMusic && musicActivity.enabled !== false,
       title: hasMusic ? musicTitle : '',
       artist: hasMusic ? musicArtist : '',
       cover: hasMusic ? musicCover : '',
@@ -634,8 +634,8 @@ function mapProfileResponse(response) {
     },
     embeds: {},
     metadata: {
-      title: metadata.title || `${profile.displayName || username} · Vyntra`,
-      description: metadata.description || profile.bio || 'A creator profile on Vyntra',
+      title: typeof metadata.title === 'string' ? metadata.title : '',
+      description: typeof metadata.description === 'string' ? metadata.description : '',
       ogImage: assets.metadata?.url || metadata.ogImage || '',
     },
     advanced: {
@@ -664,10 +664,12 @@ function profileToPatch(profile) {
     : 'none';
 
   return {
+    username: profile.username,
     displayName: profile.displayName,
     bio: profile.bio,
     location: profile.location,
     musicActivity: profile.music ? {
+      enabled: !!profile.music.enabled && !!profile.music.src,
       title: profile.music.title || '',
       artist: profile.music.artist || '',
       cover: profile.music.cover || '',
@@ -765,12 +767,12 @@ function normalizeCursorTrail(value) {
 }
 
 function effectParticleMode(effects = {}) {
-  const explicit = normalizeParticleMode(effects.particleMode);
-  if (explicit !== 'stars' || effects.particleMode) return explicit;
+  if (typeof effects.particleMode === 'string') return normalizeParticleMode(effects.particleMode);
+  if (typeof effects.particles === 'string') return normalizeParticleMode(effects.particles);
   if (effects.snow) return 'snow';
   if (effects.rain) return 'rain';
   if (effects.stars) return 'stars';
-  if (effects.particles) return 'sparkles';
+  if (effects.particles === true) return 'sparkles';
   return 'none';
 }
 

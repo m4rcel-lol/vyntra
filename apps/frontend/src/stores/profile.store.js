@@ -11,12 +11,13 @@ export const useProfileStore = create((set, get) => ({
   saving: false,
   error: null,
   dirty: false,
+  deletedLinkIds: [],
 
   async loadCurrentProfile() {
     set({ loading: true, error: null });
     try {
       const profile = await profileService.getProfile();
-      set({ profile, loading: false, dirty: false });
+      set({ profile, loading: false, dirty: false, deletedLinkIds: [] });
       return profile;
     } catch (e) {
       set({ loading: false, error: e.message || 'Could not load profile' });
@@ -27,8 +28,13 @@ export const useProfileStore = create((set, get) => ({
   async saveProfile() {
     set({ saving: true, error: null });
     try {
-      const profile = await profileService.updateProfile(get().profile);
-      set({ profile, saving: false, dirty: false });
+      const draft = get().profile;
+      const deletedLinkIds = get().deletedLinkIds;
+      validateProfileLinks(draft.links);
+      await profileService.updateProfile(draft);
+      await syncProfileLinks(draft.links, deletedLinkIds);
+      const profile = await profileService.getProfile();
+      set({ profile, saving: false, dirty: false, deletedLinkIds: [] });
       return profile;
     } catch (e) {
       set({ saving: false, error: e.message || 'Could not save profile' });
@@ -38,7 +44,36 @@ export const useProfileStore = create((set, get) => ({
 
   setProfile: (profile) => set({ profile, dirty: true }),
 
-  reset: () => set({ profile: createDefaultProfile(), dirty: true }),
+  reset: () =>
+    set((s) => {
+      const defaults = createDefaultProfile();
+      const assetIds = {
+        ...(s.profile.assetIds ?? {}),
+        backgroundFileId: null,
+        audioFileId: null,
+        musicCoverFileId: null,
+        cursorFileId: null,
+        metadataFileId: null,
+      };
+      return {
+        profile: {
+          ...defaults,
+          id: s.profile.id,
+          username: s.profile.username,
+          uid: s.profile.uid,
+          joinDate: s.profile.joinDate,
+          views: s.profile.views,
+          avatar: s.profile.avatar,
+          banner: s.profile.banner,
+          links: s.profile.links,
+          badges: s.profile.badges,
+          music: { enabled: false, title: '', artist: '', cover: '', coverFileId: null, loop: true, volume: 45, src: '' },
+          metadata: { title: '', description: '', ogImage: '' },
+          assetIds,
+        },
+        dirty: true,
+      };
+    }),
 
   setField: (key, value) =>
     set((s) => ({
@@ -67,16 +102,6 @@ export const useProfileStore = create((set, get) => ({
   addLink: (link = {}) => {
     const tempLink = { id: nid(), label: 'New Link', url: 'https://example.com', icon: 'Link', style: 'glass', ...link };
     set((s) => ({ profile: { ...s.profile, links: [...s.profile.links, tempLink] }, dirty: true }));
-    profileService.createLink(tempLink)
-      .then((saved) => {
-        set((s) => ({
-          profile: {
-            ...s.profile,
-            links: s.profile.links.map((item) => (item.id === tempLink.id ? saved : item)),
-          },
-        }));
-      })
-      .catch((e) => set({ error: e.message || 'Could not create link' }));
   },
 
   updateLink: (id, patch) => {
@@ -84,37 +109,28 @@ export const useProfileStore = create((set, get) => ({
       profile: { ...s.profile, links: s.profile.links.map((link) => (link.id === id ? { ...link, ...patch } : link)) },
       dirty: true,
     }));
-    if (!String(id).startsWith('tmp_')) {
-      profileService.updateLink(id, patch).catch((e) => set({ error: e.message || 'Could not update link' }));
-    }
   },
 
   removeLink: (id) => {
     set((s) => ({
       profile: { ...s.profile, links: s.profile.links.filter((link) => link.id !== id) },
+      deletedLinkIds: String(id).startsWith('tmp_')
+        ? s.deletedLinkIds
+        : [...new Set([...s.deletedLinkIds, id])],
       dirty: true,
     }));
-    if (!String(id).startsWith('tmp_')) {
-      profileService.deleteLink(id).catch((e) => set({ error: e.message || 'Could not delete link' }));
-    }
   },
 
   reorderLinks: (from, to) => {
-    let orderedIds = [];
     set((s) => {
       const links = [...s.profile.links];
       if (from < 0 || to < 0 || from >= links.length || to >= links.length || from === to) {
-        orderedIds = links.map((link) => link.id);
         return s;
       }
       const [moved] = links.splice(from, 1);
       links.splice(to, 0, moved);
-      orderedIds = links.map((link) => link.id);
       return { profile: { ...s.profile, links }, dirty: true };
     });
-    if (orderedIds.length && orderedIds.every((id) => !String(id).startsWith('tmp_'))) {
-      profileService.reorderLinks(orderedIds).catch((e) => set({ error: e.message || 'Could not reorder links' }));
-    }
   },
 
   addBadge: (badge) =>
@@ -149,3 +165,53 @@ export const useProfileStore = create((set, get) => ({
       dirty: true,
     })),
 }));
+
+async function syncProfileLinks(links = [], deletedLinkIds = []) {
+  validateProfileLinks(links);
+
+  await Promise.all([...new Set(deletedLinkIds)].map((id) => profileService.deleteLink(id)));
+
+  const savedLinks = [];
+  for (const link of links) {
+    const payload = {
+      label: String(link.label || '').trim(),
+      url: String(link.url || '').trim(),
+      icon: link.icon || 'Globe',
+      style: link.style || 'glass',
+      isVisible: link.isVisible !== false,
+    };
+    const saved = String(link.id).startsWith('tmp_')
+      ? await profileService.createLink(payload)
+      : await profileService.updateLink(link.id, payload);
+    savedLinks.push(saved);
+  }
+
+  const orderedIds = savedLinks.map((link) => link.id).filter(Boolean);
+  if (orderedIds.length > 1) {
+    await profileService.reorderLinks(orderedIds);
+  }
+}
+
+function validateProfileLinks(links = []) {
+  for (const link of links) {
+    if (!String(link.label || '').trim()) {
+      throw new Error('Every link needs a title before saving.');
+    }
+    if (!String(link.url || '').trim()) {
+      throw new Error('Every link needs a URL before saving.');
+    }
+    if (!isAllowedUrl(link.url)) {
+      throw new Error(`"${link.label || 'Link'}" needs a valid URL before saving.`);
+    }
+  }
+}
+
+function isAllowedUrl(value) {
+  const normalized = !value || value === 'https://' ? 'https://example.com' : String(value).trim();
+  try {
+    const url = new URL(normalized);
+    return ['http:', 'https:', 'mailto:', 'bitcoin:', 'ethereum:'].includes(url.protocol);
+  } catch {
+    return false;
+  }
+}
