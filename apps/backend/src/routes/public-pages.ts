@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { FileAsset, Profile } from "@prisma/client";
 import { z } from "zod";
 import { env } from "../env.js";
@@ -13,7 +13,7 @@ const FRONTEND_SHELL_CACHE_MS = 30_000;
 let cachedFrontendShell: { html: string; expiresAt: number } | null = null;
 
 export async function registerPublicPageRoutes(app: FastifyInstance): Promise<void> {
-  app.get("/u/:username", async (request, reply) => {
+  const renderProfilePage = async (request: FastifyRequest, reply: FastifyReply) => {
     const params = paramsSchema.parse(request.params);
     const username = params.username.toLowerCase();
     const shell = await loadFrontendShell(app);
@@ -59,7 +59,10 @@ export async function registerPublicPageRoutes(app: FastifyInstance): Promise<vo
         image,
         username: profile.user.username
       }));
-  });
+  };
+
+  app.get("/u/:username", renderProfilePage);
+  app.get("/u/:username/", renderProfilePage);
 }
 
 async function loadFrontendShell(app: FastifyInstance): Promise<string> {
@@ -88,13 +91,22 @@ async function loadFrontendShell(app: FastifyInstance): Promise<string> {
 
 function frontendShellUrls(): string[] {
   const urls = [
-    process.env.FRONTEND_SHELL_URL,
-    "http://frontend/index.html",
-    absoluteFromOrigin("/index.html", firstOrigin(env.FRONTEND_ORIGIN)),
-    absoluteFromOrigin("/index.html", env.PUBLIC_APP_URL)
+    normalizeShellUrl(process.env.FRONTEND_SHELL_URL),
+    "http://frontend/index.html"
   ].filter((url): url is string => Boolean(url));
 
   return [...new Set(urls)];
+}
+
+function normalizeShellUrl(value: string | undefined): string {
+  const trimmed = value?.trim();
+  if (!trimmed) return "";
+  try {
+    const url = new URL(trimmed);
+    return url.toString();
+  } catch {
+    return "";
+  }
 }
 
 function injectProfileMetadata(
@@ -183,10 +195,6 @@ function requestOrigin(request: FastifyRequest): string {
 function firstHeader(value: string | string[] | undefined): string {
   if (Array.isArray(value)) return value[0]?.split(",")[0]?.trim() || "";
   return value?.split(",")[0]?.trim() || "";
-}
-
-function firstOrigin(value: string): string {
-  return value.split(",")[0]?.trim() || "";
 }
 
 function absoluteFromOrigin(pathname: string, origin: string): string {
